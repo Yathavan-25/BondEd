@@ -32,7 +32,7 @@ export default function HowItWorks() {
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="text-4xl md:text-5xl font-extrabold text-primary tracking-tight mb-3"
+          className="text-4xl md:text-5xl font-extrabold text-primary-color tracking-tight mb-3"
         >
           Forming the Perfect Bond
         </motion.h2>
@@ -41,7 +41,7 @@ export default function HowItWorks() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-sm text-gray-500 tracking-widest"
+          className="text-sm text-gray-500 tracking-widest font-geist"
         >
           From building your profile to your first collaborative session in minutes.
         </motion.p>
@@ -128,7 +128,7 @@ function StepRow({
           {title}
         </h3>
         
-        <p className="text-sm md:text-base text-gray-500 leading-relaxed font-light">
+        <p className="text-sm md:text-base text-gray-500 leading-relaxed font-light font-geist">
           {description}
         </p>
       </motion.div>

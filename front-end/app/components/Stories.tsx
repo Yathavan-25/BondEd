@@ -36,32 +36,18 @@ const TESTIMONIALS = [
   },
 ]
 
-// Duplicate the array so the infinite slider loops seamlessly
 const SLIDER_ITEMS = [...TESTIMONIALS, ...TESTIMONIALS]
 
 export default function Stories() {
   return (
     <section className="w-full py-24 overflow-hidden relative">
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes pure-css-marquee {
-          0% { transform: translateX(0) translateZ(0); }
-          100% { transform: translateX(-50%) translateZ(0); }
-        }
-        .animate-pure-marquee {
-          animation: pure-css-marquee 35s linear infinite;
-          /* Force GPU rendering and pre-allocate memory */
-          will-change: transform;
-          transform: translateZ(0);
-          backface-visibility: hidden;
-        }
-      `}} />
-
+    
       {/* --- Section Header --- */}
       <div className="text-center mb-16 px-6">
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           className="text-[11px] font-bold tracking-[.18em] uppercase text-violet-500 mb-3"
         >
           Success Stories
@@ -70,8 +56,9 @@ export default function Stories() {
         <motion.h2
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ delay: 0.05 }}
-          className="text-4xl md:text-5xl font-extrabold text-primary tracking-tight mb-3"
+          className="text-4xl md:text-5xl font-extrabold text-primary-color tracking-tight mb-3"
         >
           Don&apos;t just take our word for it
         </motion.h2>
@@ -79,23 +66,26 @@ export default function Stories() {
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
           transition={{ delay: 0.1 }}
-          className="text-sm text-gray-500 tracking-widest"
+          className="text-sm text-gray-500 tracking-widest font-geist"
         >
           See how students are reaching their goals together
         </motion.p>
       </div>
 
       {/* --- The Auto-Slider --- */}
-      <div className="relative w-full flex items-center h-100">
+      {/* ADDED: "marquee-container" class to track mouse hovers anywhere in this row */}
+      <div className="relative w-full flex items-center h-100 marquee-container">
         
-        <div className="flex gap-6 w-max px-3 animate-pure-marquee hover:[animation-play-state:paused]">
+        {/* REMOVED: Tailwind hover logic. Relies strictly on the native CSS above. */}
+        <div className="flex gap-6 w-max px-3 animate-pure-marquee">
           {SLIDER_ITEMS.map((testimonial, idx) => (
             <TestimonialCard key={idx} testimonial={testimonial} />
           ))}
         </div>
 
-        {/*Fade Edges */}
+        {/* Fade Edges */}
         <div className="absolute inset-y-0 left-0 w-32 bg-linear-to-r from-gray-50 to-transparent pointer-events-none z-20 rounded-md" />
         <div className="absolute inset-y-0 right-0 w-32 bg-linear-to-l from-gray-50 to-transparent pointer-events-none z-20 rounded-md" />
       </div>
@@ -106,8 +96,7 @@ export default function Stories() {
 
 function TestimonialCard({ testimonial }: { testimonial: typeof TESTIMONIALS[0] }) {
   return (
-
-    <div className="group w-[320px] sm:w-95 h-full flex flex-col rounded-3xl bg-white p-8 border border-gray-200 shadow-sm transition-all duration-300 hover:scale-[1.05] hover:border-violet-500 hover:shadow-xl cursor-grab active:cursor-grabbing transform-gpu">
+    <div className="group w-[320px] sm:w-95 h-full flex flex-col rounded-3xl bg-white p-8 border border-gray-200 shadow-sm transition-all duration-300 hover:scale-[1.03] hover:border-violet-500 hover:shadow-xl transform-gpu">
       
       {/* Quote Icon & Stars */}
       <div className="flex justify-between items-start mb-6">
@@ -120,7 +109,7 @@ function TestimonialCard({ testimonial }: { testimonial: typeof TESTIMONIALS[0] 
       </div>
 
       {/* Content */}
-      <p className="text-gray-600 text-[15px] leading-relaxed mb-8 grow">
+      <p className="text-gray-600 text-[15px] leading-relaxed mb-8 grow font-geist">
           &quot;{testimonial.content}&quot;
       </p>
 
@@ -131,7 +120,7 @@ function TestimonialCard({ testimonial }: { testimonial: typeof TESTIMONIALS[0] 
         </div>
         <div>
           <h4 className="font-bold text-gray-900 text-sm tracking-tight">{testimonial.name}</h4>
-          <p className="text-xs text-gray-400 mt-0.5">{testimonial.role}</p>
+          <p className="text-xs text-gray-400 mt-0.5 font-geist">{testimonial.role}</p>
         </div>
       </div>
 

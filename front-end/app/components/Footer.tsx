@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, Variants } from "framer-motion"
-import { Sparkles } from "lucide-react"
+import { GraduationCap } from "lucide-react"
 import Link from "next/link"
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -68,11 +68,11 @@ export default function Footer() {
           <motion.div variants={itemVariants} className="lg:col-span-3 flex flex-col items-start">
             <Link href="/" className="flex items-center gap-2 mb-6">
               <div className="w-8 h-8 rounded-lg bg-primary-linear flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
+                <GraduationCap className="size-5 text-white" />
               </div>
               <span className="text-2xl font-bold tracking-tight">BondEd</span>
             </Link>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-sm mb-8">
+            <p className="text-gray-400 text-sm leading-relaxed max-w-sm mb-8 font-geist">
               Empowering students to learn smarter, together. The AI-powered collaborative platform built for modern academic success.
             </p>
             
@@ -102,10 +102,9 @@ export default function Footer() {
                   <li key={i}>
                     <Link 
                       href="#" 
-                      className="text-gray-400 text-sm transition-colors duration-300 hover:text-white flex items-center group relative w-fit"
+                      className="text-gray-400 text-sm transition-colors duration-300 hover:text-white flex items-center group relative w-fit font-geist"
                     >
                       {link}
-                      {/* Optional: Tiny underline effect on hover */}
                       <span className="absolute -bottom-1 left-0 w-0 h-px bg-white transition-all duration-300 group-hover:w-full" />
                     </Link>
                   </li>
@@ -121,7 +120,7 @@ export default function Footer() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="flex flex-col sm:flex-row items-center justify-between py-6 border-t border-white/10 relative z-10"
+          className="flex flex-col font-geist sm:flex-row items-center justify-between py-6 border-t border-white/10 relative z-10"
         >
           <p className="text-gray-500 text-sm mb-4 sm:mb-0">
             &copy; {new Date().getFullYear()} BondEd. All rights reserved.

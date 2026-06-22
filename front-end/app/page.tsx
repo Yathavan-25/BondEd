@@ -8,6 +8,7 @@ import Stories from './components/Stories'
 import Pricing from './components/Pricing'
 import CTA from './components/CTA'
 import Footer from './components/Footer'
+import Link from 'next/link'
 
 const Home = () => {
 
@@ -48,7 +49,7 @@ const Home = () => {
             <div className="flex flex-col items-center max-w-4xl px-2 sm:px-6">
               <Title />
               
-              <p className="text-xs sm:text-sm md:text-base text-gray-400 max-w-xl sm:max-w-2xl font-normal leading-relaxed px-2">
+              <p className="text-xs sm:text-sm md:text-base font-geist text-gray-500 max-w-xl sm:max-w-2xl font-normal leading-relaxed px-2">
                 BondEd matches you with students who share your goals, schedule, and learning style, then powers every session with an AI assistant that takes notes, makes flashcards, and tracks your progress.
               </p>
             </div>
@@ -58,11 +59,12 @@ const Home = () => {
             {/* FIX: Added pointer-events-auto here so the buttons remain clickable! */}
             {/* ========================================== */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-4 pointer-events-auto">
-              <button className="group w-full sm:w-auto bg-primary-linear text-white font-medium shadow-lg flex items-center justify-center px-6 h-10 gap-2 hover:border-dark-primary-linear border-2 border-transparent hover:border-2 hover:bg-transparent transition-all duration-300 max-lg:text-[12px] max-lg:px-2">
-              <span>Start Collaborating</span> 
-                <ArrowRight className="w-4 h-4 mt-0.75" />
-              </button>
-              
+              <Link href="/Register">
+                <button className="group w-full sm:w-auto bg-primary-linear text-white font-medium shadow-lg flex items-center justify-center px-6 h-10 gap-2 hover:border-dark-primary-linear border-2 border-transparent hover:border-2 hover:bg-transparent transition-all duration-300 max-lg:text-[12px] max-lg:px-2">
+                <span>Start Collaborating</span> 
+                  <ArrowRight className="w-4 h-4 mt-0.75" />
+                </button> 
+              </Link>
               <button className="relative w-full sm:w-auto group overflow-hidden border-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border-white/10 hover:border-white shadow-sm px-6 py-2 flex items-center justify-center transition-all duration-900">
                 <span className="absolute bottom-0 right-0 w-64 h-64 bg-gray-300 rounded-full translate-x-1/2 translate-y-1/2 scale-0 group-hover:scale-[1.5] transition-transform duration-900 ease-in-out origin-center"></span>
                 <span className="relative z-10 font-medium group-hover:text-black transition-colors duration-700">
@@ -72,7 +74,7 @@ const Home = () => {
             </div>
 
             {/* Badges */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-gray-400 font-light mt-4">
+            <div className="flex flex-col sm:flex-row font-geist items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-gray-400 font-light mt-4">
               <span className="flex items-center gap-2">
                 <Crosshair strokeWidth={1.5} className="w-5 h-5 text-[#6366F1]" />
                 95% Accurate Matching

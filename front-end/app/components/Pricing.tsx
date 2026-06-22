@@ -80,7 +80,7 @@ export default function Pricing() {
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="text-4xl md:text-5xl font-extrabold text-primary tracking-tight mb-3"
+          className="text-4xl md:text-5xl font-extrabold text-primary-color tracking-tight mb-3"
         >
           Supercharge your study sessions
         </motion.h2>
@@ -89,7 +89,7 @@ export default function Pricing() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-sm text-gray-500 tracking-widest"
+          className="text-sm text-gray-500 tracking-widest font-geist"
         >
           Unlock the full power of AI-assisted collaboration.
         </motion.p>
@@ -135,20 +135,20 @@ export default function Pricing() {
               {/* Card Content Container */}
               <div className="relative z-10 flex flex-col p-8 h-full pointer-events-none">
                 <div className="mb-6">
-                  <h3 className={`text-xl font-bold mb-2 ${plan.highlighted ? "text-primary" : "text-slate-900"}`}>
+                  <h3 className={`text-xl font-bold mb-2 ${plan.highlighted ? "text-primary-color" : "text-slate-900"}`}>
                     {plan.name}
                   </h3>
                   <div className="flex items-baseline gap-1 mb-3">
                     <span className="text-4xl font-extrabold text-slate-900">${plan.price}</span>
-                    <span className="text-slate-500 font-medium text-sm">/package</span>
+                    <span className="text-slate-500 font-medium text-sm">/month</span>
                   </div>
-                  <p className="text-slate-500 text-sm h-10">{plan.description}</p>
+                  <p className="text-slate-500 text-sm h-10 font-geist">{plan.description}</p>
                 </div>
 
                 {/* Features List */}
                 <ul className="space-y-4 mb-8 flex-1">
                   {plan.features.map((feature, fIndex) => (
-                    <li key={fIndex} className="flex items-start gap-3">
+                    <li key={fIndex} className="flex items-start gap-3 font-geist">
                       <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
                         plan.highlighted ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-600"
                       }`}>
@@ -168,7 +168,7 @@ export default function Pricing() {
                     </button>
                   :
                   <button
-                    className={`w-full py-3.5 rounded-xl font-bold transition-transform duration-300 transform-gpu hover:scale-[1.02] active:scale-95`}
+                    className={`w-full px-6 py-2 text-white hover:bg-transparent hover:text-primary-color border-2 border-transparent hover:border-primary-color rounded-xl font-regular bg-primary-color transition-transform duration-300 transform-gpu hover:scale-[1.02] active:scale-95`}
                   >
                     Choose {plan.name}
                   </button> 

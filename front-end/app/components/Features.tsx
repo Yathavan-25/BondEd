@@ -96,7 +96,7 @@ export default function PlatformEcosystem() {
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="text-4xl md:text-5xl font-extrabold text-primary tracking-tight mb-3"
+          className="text-4xl md:text-5xl font-extrabold text-primary-color tracking-tight mb-3"
         >
           Everything You Need
         </motion.h2>
@@ -105,7 +105,7 @@ export default function PlatformEcosystem() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-sm text-gray-500 tracking-widest"
+          className="text-sm text-gray-500 tracking-widest font-geist"
         >
           For successful collaborative learning
         </motion.p>
@@ -158,7 +158,7 @@ function FeatureCard({ feature }: { feature: (typeof FEATURES)[number] }) {
           {title}
         </h3>
 
-        <p className="text-[13px] text-gray-500 leading-relaxed">
+        <p className="text-[13px] text-gray-500 leading-relaxed font-geist">
           {desc}
         </p>
       </div>
@@ -169,7 +169,7 @@ function FeatureCard({ feature }: { feature: (typeof FEATURES)[number] }) {
           {title}
         </h3>
 
-        <p className="text-[13px] text-white leading-relaxed">
+        <p className="text-[13px] text-white leading-relaxed font-geist">
           {desc}
         </p>
       </div>

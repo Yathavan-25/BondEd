@@ -2,6 +2,7 @@
 
 import { motion, Variants } from "framer-motion"
 import { Headset, WandSparkles } from "lucide-react"
+import Link from "next/link"
 
 
 const containerVariants: Variants = {
@@ -44,7 +45,7 @@ const CTA = () => {
         {/* Subtitle */}
         <motion.p 
           variants={itemVariants}
-          className="text-center font-geist text-white text-[16px] md:text-[20px] font-light mt-4"
+          className="text-center font-geist text-white/75 text-[16px] md:text-[20px] font-light mt-4"
         >
           Join 12,000+ students already studying smarter with BondEd
         </motion.p>
@@ -55,18 +56,20 @@ const CTA = () => {
           className="flex flex-col md:flex-row gap-4 md:gap-16 mt-10 justify-center items-center w-full md:w-auto"
         >
             {/* FIRST BUTTON */}
-            <button className="group relative w-full md:w-auto overflow-hidden border-2  hover:border-violet-600 bg-transparent text-primary hover:text-white px-6 py-2 flex items-center justify-center transition-all duration-900">
-                <span className="absolute bottom-0 right-0 w-300 h-300 bg-white rounded-full translate-x-1/2 translate-y-1/2 scale-[1.5] group-hover:scale-0 transition-transform duration-1500 ease-in-out origin-center"></span>
-                <span className="relative z-10 flex items-center gap-2.5 font-medium">
-                    Start Learning <WandSparkles className="size-4.5" />
-                </span>
-            </button>
-            
+
+            <Link href="/Register" >
+              <button className="group relative w-full md:w-auto overflow-hidden border-2  hover:border-violet-600 bg-transparent text-primary-color hover:text-white px-6 py-2 flex items-center justify-center transition-all duration-900">
+                  <span className="absolute bottom-0 right-0 w-300 h-300 bg-white rounded-full translate-x-1/2 translate-y-1/2 scale-[1.5] group-hover:scale-0 transition-transform duration-900 ease-in-out origin-center"></span>
+                  <span className="relative z-10 flex items-center gap-2.5 font-medium">
+                      Start Learning <WandSparkles className="size-4.5" />
+                  </span>
+              </button>
+            </Link>
             {/* SECOND BUTTON*/}
-            <button className="relative w-full md:w-auto group overflow-hidden border-2 bg-white/5 hover:bg-white/10 text-white/90 hover:text-white border-violet-600 hover:border-primary shadow-sm px-6 py-2 flex items-center justify-center transition-all duration-900">
-                <span className="absolute bottom-0 right-0 w-300 h-300 bg-white rounded-full translate-x-1/2 translate-y-1/2 scale-0 group-hover:scale-[1.5] transition-transform duration-1500 ease-in-out origin-center"></span>
+            <button className="relative w-full md:w-auto group overflow-hidden border-2 bg-white/5 hover:bg-white/10 text-white/90 hover:text-white border-violet-600 hover:border-primary-color shadow-sm px-6 py-2 flex items-center justify-center transition-all duration-900">
+                <span className="absolute bottom-0 right-0 w-300 h-300 bg-white rounded-full translate-x-1/2 translate-y-1/2 scale-0 group-hover:scale-[1.5] transition-transform duration-900 ease-in-out origin-center"></span>
                 
-                <span className="relative z-10 font-medium flex items-center gap-2.5 group-hover:text-primary transition-colors duration-700">
+                <span className="relative z-10 font-medium flex items-center gap-2.5 group-hover:text-primary-color transition-colors duration-700">
                   Talk to Sales <Headset className="size-4.5" />
                 </span>
             </button>
