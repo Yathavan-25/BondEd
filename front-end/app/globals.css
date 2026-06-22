@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&family=Geist:ital,wght@0,100..900;1,100..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+
+  --background-image-primary-linear: linear-gradient(
+    -45deg, 
+    rgba(79, 85, 238, 0.85) 20%, 
+    rgba(156, 47, 223, 0.85) 100%  
+  );
+  --background-image-line-linear: linear-gradient(
+    45deg, 
+    rgba(10, 116, 253, 0.61) 0%,
+    rgba(19, 99, 203, 1) 50%,
+    rgba(115, 32, 217, 1) 100%
+  );
+
+  --color-primary: #225CA6;
+  --color-secondary: #4993F24D;
+  --color-gray-background: #F1F5F9;  
+
+  --font-funnel: "Funnel Display", sans-serif;
+  --font-geist: "Geist", sans-serif;
+
+  --radius-sm: 10px;
+  --radius-md: 25px;
+  --radius-lg: 65px;
+}
+
+@utility text-primary-linear {
+  background-image: var(--background-image-primary-linear); 
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility text-line-linear {
+  background-image: var(--background-image-line-linear);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility border-primary-linear {
+  border: 2px solid transparent;
+  background-image: var(--background-image-primary-linear);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-image: linear-gradient(white, white),
+    var(--background-image-primary-linear); 
+}    
+
+@utility border-dark-primary-linear {
+  border: 2px solid transparent;
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.80), rgba(0, 0, 0, 0.80)),
+    var(--background-image-primary-linear);   
+} 
+
+@utility border-line-linear {
+  border: 2px solid transparent;
+  background-image: var(--background-image-line-linear);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-image: linear-gradient(white, white),
+    var(--background-image-line-linear);  
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body{
+  font-family: var(--font-funnel);
+  background-color: var(--color-gray-background);
+}
+
+button{
+  @apply rounded-sm cursor-pointer font-funnel text-[16px] transition-all duration-300       
+}
+ 
+.card{
+  @apply rounded-md shadow bg-white px-5 py-3 border border-gray-300
+} 
+
+
+
