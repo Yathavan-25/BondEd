@@ -1,10 +1,19 @@
+"use client";
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { ChartNoAxesCombined, GraduationCap, Sparkles, Users } from 'lucide-react'
+import { ChartNoAxesCombined, Eye, EyeOff, GraduationCap, Sparkles, Users } from 'lucide-react'
 import Image from 'next/image'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { auth, googleProvider } from '@/lib/firebase'
+import { getAdditionalUserInfo, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth'
+import toast from 'react-hot-toast';
 
-const page = () => {
+const Login = () => {
+
+    const [ showPassword, setShowPassword ] = useState(false);
+    const [ showConfirmPassword, setShowConfirmPassword ] = useState(false);
 
     const subContent = [
         {icon : Sparkles , text : "Access your personalized dashboard"},
@@ -13,31 +22,108 @@ const page = () => {
     ]
 
     const formContent = [
-        {
-            id : "email",
-            text : "Email",
-            placeholder : "name@example.com",
-            type : "email"
-        },
-        {
-            id : "password",
-            text : "Password",
-            placeholder : "Create a strong password",
-            type : "password"
-        }
+        { id : "email", text : "Email", placeholder : "name@example.com", type : "email" },
+        { id : "password", text : "Password", placeholder : "Enter Your Password", type : "password" }
     ]
+
+    const [ formData, setFormData ] = useState({email : '' , password : ''});
+    const router = useRouter();
+
+    const getInputType = (item: { id: string; type: string }) => {
+      if (item.id === "password") return showPassword ? "text" : "password";
+      if (item.id === "CnfrmPassword") return showConfirmPassword ? "text" : "password";
+      return item.type;
+  };
+
+  const handleGoogleSignIn = async () =>{
+        try {
+          //Google Popup
+          const result = await signInWithPopup(auth,googleProvider);
+          const additionalInfo = getAdditionalUserInfo(result);
+
+          if (additionalInfo?.isNewUser) {
+            await signOut(auth);
+            toast.error("Account not found. Please sign up using your Google account to get started.");
+            router.push("/Register");
+            return;
+          }
+  
+          const token = await result.user.getIdToken();
+          //Google's display name needs to be split to get first and last name
+          const names = result.user.displayName?.split(' ') || ['']
+          const firstName = names[0];
+          const lastName = names.slice(1).join(' ');
+  
+          const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/auth/sync`, {
+            method : "POST",
+            headers : {
+              'Content-Type': "application/json",
+              'Authorization' : `Bearer ${token}`
+            },
+            body : JSON.stringify ({
+              firstName : firstName || "Student",
+              lastName : lastName || ""
+            })
+          })
+          const data = await response.json();
+  
+          if(response.ok){
+            toast.success("Login Successful");
+            router.push(`/Student/${data.user.id}/Dashboard`)
+          }
+          
+        } catch (error) {
+          console.error("Auth error ", error);
+          toast.error("Registration Failed");
+        }
+      }
+
+    const handleLogin = async (e : React.FormEvent) => {
+      e.preventDefault();
+
+      if (!formData.email || !formData.password) {
+        toast.error('Please fill in all fields.');
+        return;
+      }
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        const additionalInfo = getAdditionalUserInfo(userCredential);
+
+          if (additionalInfo?.isNewUser) {
+            await signOut(auth);
+            toast.error("Account not found. Please sign up first to get started.");
+            router.push("/Register");
+            return;
+          }
+        const token = await userCredential.user.getIdToken();
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/auth/sync`, {
+          method:"POST",
+          headers : {
+            'Authorization' : `Bearer ${token}`
+          }
+        })
+
+        const data = await response.json();
+
+        if(response.ok){
+          toast.success("Login Successful")
+          router.push(`/Student/${data.user.id}/Dashboard`)
+        }
+      } catch (error) {
+        console.log("Login Error", error);
+        toast.error("Login Failed")
+      }
+    }
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen lg:mx-20 mx-4 my-28">
-        {/* Full Background Gradient Container */}
         <section className="relative w-full bg-primary-linear rounded-[2.5rem] flex flex-col lg:flex-row overflow-hidden shadow-2xl">
-          
 
-          {/* ======================================================== */}
-          {/* LEFT SIDE - BRANDING & HERO                              */}
-          {/* ======================================================== */}
+          {/* LEFT SIDE */}
           <div className="relative z-10 flex-1 flex flex-col justify-center p-10 lg:p-20 text-white">
             
             {/* Logo */}
@@ -48,7 +134,6 @@ const page = () => {
               <span className="lg:text-2xl font-bold tracking-tight">BondEd</span>
             </Link>
 
-            {/* Content Centered Vertically */}
             <div className="flex flex-col items-center">
               <h1 className="text-4xl lg:text-5xl font-semibold tracking-tight text-center mb-4 leading-[1.1]">
               Welcome back, Continue  <br />  your learning journey.
@@ -73,12 +158,8 @@ const page = () => {
             </div>
           </div>
 
-          {/* ======================================================== */}
-          {/* RIGHT SIDE - GLASSMORPHISM FORM                          */}
-          {/* ======================================================== */}
+          {/* RIGHT SIDE */}
           <div className="relative z-10 w-full lg:w-125 flex items-center ">
-            
-            {/* The Glass Card with exact user margins */}
             <div className="w-full lg:mr-10.25 lg:my-8.75 m-6 p-8 sm:p-10 bg-white/35 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.15)] flex flex-col text-white">
               
               {/* Form Headers */}
@@ -93,30 +174,15 @@ const page = () => {
 
               <div className="flex flex-col gap-6 font-geist">
                 
-                {/* Glassy Google SSO Button */}
-                <button 
-                  type="button" 
-                  className="w-full flex items-center justify-center gap-3 rounded-xl border border-line-linear bg-white/5 px-4 py-3.5 text-sm font-regular transition-all hover:bg-white/10 hover:border-white/30 shadow-sm active:scale-[0.98] text-black"
-                >
-                <Image src="/icons/google.svg" width={24} height={24} alt='Google Icon' />
-                  Sign In with Google
-                </button>
 
-                {/* Divider */}
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-1 bg-white/20"></div>
-                  <span className="text-xs font-medium uppercase text-white/50 tracking-wider">Or continue with</span>
-                  <div className="h-px flex-1 bg-white/20"></div>
-                </div>
-
-                {/* Glassy Registration Form */}
+                
 
 
                 <form className="grid grid-cols-2 gap-4">
                     {formContent.map((item, key) => {
-                        // Check if the item should be half-width or full-width
                         const isHalfWidth = item.id === "firstName" || item.id === "lastName";
-
+                        const isPasswordField = item.id === "password"
+                        const isShowingPassword = item.id === "password" ? showPassword : showConfirmPassword;
                         return (
                             <div 
                                 key={key} 
@@ -125,12 +191,29 @@ const page = () => {
                                 <label htmlFor={item.id} className="text-sm font-medium text-white/90">
                                     {item.text}
                                 </label>
-                                <input 
-                                    type={item.type}  
-                                    id={item.id} 
-                                    placeholder={item.placeholder} 
-                                    className="h-11 w-full rounded-xl border border-white/20 bg-white/10 px-4 text-sm text-white outline-none transition-all placeholder:text-white/60 focus:placeholder:text-white focus:border-white/50 focus:bg-white/20 focus:ring-4 focus:ring-white/10"
-                                />
+                                <div className="relative">
+                                    <input 
+                                        type={getInputType(item)}
+                                        id={item.id} 
+                                        placeholder={item.placeholder}
+                                        onChange={(e) => {
+                                            setFormData((prevData) => ({
+                                                ...prevData,
+                                                [item.id]: e.target.value
+                                            }));
+                                        }} 
+                                        className={`h-11 w-full rounded-xl border border-white/20 bg-white/10 px-4 text-sm text-white outline-none transition-all placeholder:text-white/60 focus:placeholder:text-white focus:border-white/50 focus:bg-white/20 focus:ring-4 focus:ring-white/10 ${isPasswordField ? 'pr-11' : ''}`}
+                                    />
+                                    {isPasswordField && (
+                                        <button
+                                            type="button"
+                                            onClick={() => item.id === "password" ? setShowPassword(p => !p) : setShowConfirmPassword(p => !p)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                                        >
+                                            {isShowingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
@@ -143,14 +226,24 @@ const page = () => {
                         </div>
                         <span className='text-sm font-medium text-primary/70 transition-colors hover:text-white cursor-pointer'>Forgot Password ?</span>
                     </div>
-                    {/* Your Submit Button goes here, using col-span-2 to stretch across the bottom */}
-                    <button type='submit' className="group border-2 bg-primary-linear px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all">
-                        <span className="group-hover:text-primary-linear group-hover:font-bold">Create Account</span>
+                    <button type='button' onClick={handleLogin} className="group border-2 bg-primary-linear px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all">
+                        <span className="group-hover:text-primary-linear group-hover:font-bold">Login</span>
                     </button>
-                   
 
-                  
-
+                    {/* Divider */}
+                    <div className="flex items-center gap-4">
+                      <div className="h-px flex-1 bg-white/20"></div>
+                      <span className="text-xs font-medium uppercase text-white/50 tracking-wider">Or continue with</span>
+                      <div className="h-px flex-1 bg-white/20"></div>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={handleGoogleSignIn} 
+                      className="w-full flex items-center justify-center gap-3 rounded-xl border border-line-linear bg-white/5 px-4 py-3.5 text-sm font-regular transition-all hover:bg-white/10 hover:border-white/30 shadow-sm active:scale-[0.98] text-black"
+                    >
+                    <Image src="/icons/google.svg" width={24} height={24} alt='Google Icon' />
+                      Sign In with Google
+                    </button>
               </div>
 
               {/* Footer Login Link */}
@@ -171,4 +264,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Login

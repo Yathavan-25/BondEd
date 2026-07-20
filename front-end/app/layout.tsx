@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Funnel_Display } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -10,7 +11,7 @@ const geistSans = Geist({
 const funnelDisplay = Funnel_Display({
   variable: "--font-funnel-display",
   subsets: ["latin"],
-  weight: ["300", "800"], // Matches your current Google Font import range
+  weight: ["300", "800"],
 });
 
 export const metadata: Metadata = {
@@ -28,7 +29,25 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${funnelDisplay.variable}  h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+      <Toaster position="top-right" reverseOrder={false} toastOptions={{
+         success: {
+          style: {
+            background: "#059669", 
+            color: "#FFFFFF",    
+            borderRadius: "12px", 
+          },
+        },
+        error: {
+          style: {
+            background: "#DC2626", 
+            color: "#FFFFFF",
+            borderRadius: "12px",
+          }},
+          duration: 3000,
+        }}/>
+        {children}
+      </body>
     </html>
   );
 }

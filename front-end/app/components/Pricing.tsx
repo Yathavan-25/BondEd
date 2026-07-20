@@ -164,7 +164,7 @@ export default function Pricing() {
 
                   {plan.highlighted ? 
                     <button className="group border-2 bg-primary-linear w-full px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all">
-                    <span className="group-hover:text-primary-linear">Get Started</span>
+                    <span className="group-hover:text-primary-linear">Choose Student</span>
                     </button>
                   :
                   <button

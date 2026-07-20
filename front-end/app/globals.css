@@ -94,12 +94,17 @@ button{
 .animate-pure-marquee {
   animation: marquee 35s linear infinite;
 } 
-/* THE FIX: Guaranteed Native CSS Pause */
 .marquee-container:hover .animate-pure-marquee {
   animation-play-state: paused !important;
 } 
 
-
+.custom-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.custom-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
 
 
 @theme inline {
