@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String              @id @default(cuid())
+  firebaseUid       String              @unique
+  email             String              @unique
+  firstName         String?
+  lastName          String?
+  createdAt         DateTime            @default(now())
+  profile           Profile?
+  credits           UserCredits?
+  sessions          Session[]           @relation("SessionParticipants")
+  hostedSessions    Session[]           @relation("SessionHost")
+  transactions      CreditTransaction[]
+  usageLogs         UsageLog[]  
+}
+
+model Profile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  personality      Json
+  learningStyle    String[]
+  knowledgeLevel   Json
+  topics           String[]
+  subjects         String[]
+  availability     Json
+  academicGoals    String
+  updatedAt        DateTime @updatedAt
+  sentRequests     Request[] @relation("SentRequests")
+  receivedRequests Request[] @relation("ReceivedRequests")
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+}
+
+model UserCredits {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id])
+  vapiMinutesRemaining  Int      @default(0)
+  dailyMinutesRemaining Int      @default(0)
+  updatedAt             DateTime @updatedAt
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  hostId        String
+  host          User     @relation("SessionHost", fields: [hostId], references: [id])
+  participants  User[]   @relation("SessionParticipants")
+  title         String?  
+  subject       String?  
+  dailyRoomUrl  String?
+  recordingUrl  String?
+  startTime     DateTime
+  endTime       DateTime?
+  status        String   
+  analysis      SessionAnalysis?
+  createdAt     DateTime @default(now())
+}
+
+model SessionAnalysis {
+  id                    String   @id @default(cuid())
+  sessionId             String   @unique
+  session               Session  @relation(fields: [sessionId], references: [id])
+  transcriptUrl         String
+  summary               String   @db.Text
+  topics                String[]
+  participantMetrics    Json     
+  knowledgeDemonstrated Json
+  profileUpdates        Json
+  flashcardsGenerated   String[]
+  createdAt             DateTime @default(now())
+}
+
+model CreditTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  amount          Float
+  stripePaymentId String   @unique
+  vapiMinutes     Int
+  dailyMinutes    Int
+  status          String   
+  createdAt       DateTime @default(now())
+}
+
+model UsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  service   String   
+  usage     Float
+  cost      Float
+  sessionId String?
+  createdAt DateTime @default(now())
+}
+
+model CachedImage {
+  id         String   @id @default(cuid())
+  topic      String
+  subject    String
+  imageUrl   String
+  source     String   // "wikimedia", "unsplash", "dalle-3", "google"
+  keywords   String[]
+  usageCount Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([topic, subject])
+  @@index([keywords])
+}
+
+// ADD THE FULL REQUEST MODEL
+model Request {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     String   @default("Pending")
+  message    String?  // Optional message from sender
+  topic      String?  // What topic they want to study
+  createdAt  DateTime @default(now())
+
+  sender     Profile  @relation("SentRequests", fields: [senderId], references: [userId])
+  receiver   Profile  @relation("ReceivedRequests", fields: [receiverId], references: [userId])
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+// ADD THE FULL MESSAGE MODEL
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  sender     Profile  @relation("SentMessages", fields: [senderId], references: [userId])
+  receiver   Profile  @relation("ReceivedMessages", fields: [receiverId], references: [userId])
+
+  @@index([senderId])
+  @@index([receiverId])
+}
