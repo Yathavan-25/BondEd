@@ -343,6 +343,7 @@ function StatCard({ title, value, subtitle, subColor, icon: Icon, stroke, trend 
   );
 }
 
+// ---------- subcomponents ----------
 function ChartBar({ day, height, value, active = false, selected = false, delay = 0, onSelect }: any) {
   const highlight = selected || active;
   return (
@@ -353,7 +354,8 @@ function ChartBar({ day, height, value, active = false, selected = false, delay 
         </div>
         <motion.div
           initial={{ height: 0 }} animate={{ height: `${height}%` }} transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }} whileHover={{ scaleY: 1.03 }} style={{ transformOrigin: "bottom" }}
-          className={`w-full max-w-11 rounded-t-xl transition-colors ${highlight ? "bg-linear-to-t bg-[#1363CB] to-gray-700 shadow-[0_6px_20px_-8px_rgba(15,23,42,0.5)]" : "bg-linear-to-t bg-[#1363CB] to-gray-100 group-hover:bg-[#526186] group-hover:to-gray-200"}`}
+          // FIX: Corrected tailwind gradient syntax!
+          className={`w-full max-w-11 rounded-t-xl transition-colors ${highlight ? "bg-linear-to-t from-[#1363CB] to-gray-700 shadow-[0_6px_20px_-8px_rgba(15,23,42,0.5)]" : "bg-linear-to-t from-[#1363CB] to-gray-100 group-hover:from-[#526186] group-hover:to-gray-200"}`}
         />
       </div>
       <span className={`text-xs font-medium ${highlight ? "text-gray-900" : "text-gray-500"}`}>{day}</span>
@@ -362,6 +364,8 @@ function ChartBar({ day, height, value, active = false, selected = false, delay 
 }
 
 function UsageBar({ icon, iconBg, label, used, total, percent, barClass }: any) {
+  // Prevent NaN if total is 0
+  const safePercent = total > 0 ? percent : 0;
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
@@ -376,7 +380,7 @@ function UsageBar({ icon, iconBg, label, used, total, percent, barClass }: any) 
       </div>
       <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
         <motion.div
-          key={`${label}-${used}`} initial={{ width: 0 }} animate={{ width: `${percent}%` }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+          key={`${label}-${used}`} initial={{ width: 0 }} animate={{ width: `${safePercent}%` }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           className={`h-full rounded-full ${barClass}`}
         />
       </div>

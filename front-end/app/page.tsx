@@ -33,7 +33,6 @@ const Home = () => {
 
           {/* ========================================== */}
           {/* Foreground Content Container */}
-          {/* FIX: Added pointer-events-none here so the mouse goes THROUGH this layer to the 3D scene */}
           {/* ========================================== */}
           <div className="relative z-10 w-full h-full grow flex flex-col items-center justify-between gap-8 text-center pt-16 pointer-events-none">
             

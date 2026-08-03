@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
@@ -6,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Vapi from "@vapi-ai/web";
-import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen } from "lucide-react";
+import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen,AlertTriangle } from "lucide-react";
 import { auth } from "@/lib/firebase";
 
 const VAPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "";
@@ -31,6 +33,10 @@ export default function VoiceAssistantPage() {
   
   const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [customTopic, setCustomTopic] = useState<string>("");
+  
+  // Real-time credits & warnings
+  const [availableMinutes, setAvailableMinutes] = useState<number>(0);
+  const [timeWarning, setTimeWarning] = useState<string | null>(null);
 
   const vapiRef = useRef<any>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
@@ -38,19 +44,14 @@ export default function VoiceAssistantPage() {
   const sessionStartRef = useRef<Date | null>(null);
   const finalTopicRef = useRef<string>("");
   const currentCallIdRef = useRef<string | null>(null);
-  // Guards against finalizing twice (e.g. tool call arrives right as the
-  // fallback timer also fires).
   const hasFinalizedRef = useRef(false);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Keep a live ref to the transcripts array so finalizeSession (called from
-  // an event handler) always sees the latest value, not a stale closure.
   const transcriptsRef = useRef<TranscriptMessage[]>([]);
 
   useEffect(() => {
     finalTopicRef.current = customTopic.trim() || selectedTopic;
   }, [customTopic, selectedTopic]);
   
-  // Keep the ref in sync with the active call ID
   useEffect(() => {
     currentCallIdRef.current = currentCallId;
   }, [currentCallId]);
@@ -71,6 +72,7 @@ export default function VoiceAssistantPage() {
           const token = await user?.getIdToken();
           const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
           
+          // Fetch Profile
           const res = await fetch(`${baseUrl}/api/profile/${studentId}`, { 
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -82,6 +84,7 @@ export default function VoiceAssistantPage() {
             }
           }
 
+          // Fetch Last Session Memory
           const memRes = await fetch(`${baseUrl}/api/summary/last/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
           if (memRes.ok) {
               const memData = await memRes.json();
@@ -89,15 +92,19 @@ export default function VoiceAssistantPage() {
                   setMemory(`Last session summary: ${memData.lastSession.summary}. Next steps requested: ${memData.lastSession.profileUpdates?.nextSteps}`);
               }
           }
+
+          // Fetch Actual Credits Remaining
+          const credRes = await fetch(`${baseUrl}/api/payments/credits/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+          if (credRes.ok) {
+              const credData = await credRes.json();
+              setAvailableMinutes(credData.vapiMinutesRemaining || 0);
+          }
         })
       } catch (err) { console.error("Failed to load context", err); }
     };
     fetchContext();
   }, [studentId]);
 
-  // Sends the completed session data to the backend (fire-and-forget) and
-  // immediately redirects to the Summary page, which shows its own
-  // "preparing" state until the new session shows up.
   const finalizeSession = async (structuredData: any, summary?: string) => {
     if (hasFinalizedRef.current) return;
     hasFinalizedRef.current = true;
@@ -110,8 +117,6 @@ export default function VoiceAssistantPage() {
     setAssistantState("analyzing");
     try { vapiRef.current?.stop(); } catch { /* already stopped, ignore */ }
   
-    // Read from refs, not state directly — state closures inside the
-    // mount-once vapi message handler can be stale.
     const finalTopic = finalTopicRef.current || "General Study";
     const callId = currentCallIdRef.current;
     const startTime = sessionStartRef.current?.toISOString() || new Date().toISOString();
@@ -162,8 +167,6 @@ export default function VoiceAssistantPage() {
         return;
       }
 
-      // Capture the live tool call the moment the assistant makes it —
-      // this is what replaces waiting on Vapi's post-call analysis.
       let toolName: string | undefined;
       let toolArgs: any;
 
@@ -186,11 +189,7 @@ export default function VoiceAssistantPage() {
     });
     vapi.on("message", onMessage);
     vapi.on("call-end", () => {
-      // If the call ends for any reason (network drop, etc.) before we've
-      // finalized, don't leave the student stuck — save what we have.
-      if (!hasFinalizedRef.current) {
-        finalizeSession({}, undefined);
-      }
+      if (!hasFinalizedRef.current) finalizeSession({}, undefined);
     });
     vapi.on("error", (e: any) => {
         console.error("VAPI ERROR:", e);
@@ -202,9 +201,9 @@ export default function VoiceAssistantPage() {
       vapi.stop();
       if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Interval for counting seconds and animating waves
   useEffect(() => {
     if (assistantState !== "listening") return;
     const interval = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -212,15 +211,37 @@ export default function VoiceAssistantPage() {
     return () => { clearInterval(interval); clearInterval(waveId); };
   }, [assistantState]);
 
+  // Real-time minutes check (Checks limits every second)
+  useEffect(() => {
+    if (assistantState !== "listening") return;
+    const leftSec = availableMinutes * 60 - seconds;
+    
+    if (leftSec <= 0) {
+      setTimeWarning("Out of credits! Ending session.");
+      // Hard stop immediately
+      finalizeSession({}, "Session forcefully ended due to out of minutes.");
+    } else if (leftSec <= 120) {
+      setTimeWarning(`Only ${Math.ceil(leftSec / 60)} minute(s) left! Session will end automatically.`);
+    } else {
+      setTimeWarning(null);
+    }
+  }, [seconds, availableMinutes, assistantState]);
+
   const toggleStart = async () => {
     const finalTopic = customTopic.trim() || selectedTopic;
     if (!finalTopic) return alert("Please select or type a topic first!");
+    
+    // Prevent starting if no minutes left
+    if (availableMinutes <= 0) {
+        return alert("You are out of AI Voice minutes! Please add more credits to your account to start a session.");
+    }
 
     if (assistantState === "idle" || assistantState === "stopped") {
       setAssistantState("loading");
       setSeconds(0);
       setTranscripts([]);
       setLiveMessage(null);
+      setTimeWarning(null);
       hasFinalizedRef.current = false;
 
       try {
@@ -251,9 +272,6 @@ export default function VoiceAssistantPage() {
     }
   };
 
-  // Instead of hanging up immediately, ask the assistant to wrap up so it
-  // gets a chance to give a natural goodbye and call submitSessionAnalysis.
-  // A fallback timer guarantees we move on even if that never happens.
   const stopSession = () => {
     setAssistantState("analyzing");
   
@@ -275,28 +293,47 @@ export default function VoiceAssistantPage() {
         console.warn("submitSessionUpdate never fired — finalizing with fallback data.");
         finalizeSession({}, undefined);
       }
-    }, 20000); // slightly longer window, since the assistant now has to actually speak + call the tool
+    }, 20000); 
   };
 
   const formattedTime = `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
-  const minutesUsed = Math.min(500, Math.round(seconds / 60));
+  const minutesUsed = Math.floor(seconds / 60);
+  const minutesRemaining = Math.max(0, availableMinutes - minutesUsed);
   const focusScore = Math.min(100, 60 + Math.round(Math.sin(seconds / 6) * 12) + Math.min(28, seconds / 4));
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 pb-10 px-4 md:px-6 pt-6">
+    <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 pb-10 px-4 md:px-6 pt-6 relative">
+      
+      {/* Time Warning Toast */}
+      <AnimatePresence>
+        {timeWarning && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -20 }} 
+            className="fixed top-24 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 shadow-lg z-50"
+          >
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+            {timeWarning}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
             <span className="relative inline-flex"><span className="absolute inset-0 rounded-full bg-[#9C2FDF]/20 blur-lg" /><Mic className="relative w-8 h-8 text-[#9C2FDF]" /></span>
-            Study Partner
+            AI Voice Assistant
           </h1>
           <p className="text-sm md:text-base text-gray-500 mt-1">Select a topic and start your personalized voice session.</p>
         </div>
         <div className="flex items-center gap-2 rounded-2xl border border-gray-200/80 bg-white/70 backdrop-blur px-3 py-2 shadow-sm">
           <div className="flex items-center gap-2 px-2"><Activity className="w-4 h-4 text-[#1363CB]" /><span className="text-xs font-semibold text-gray-700">{focusScore}% focus</span></div>
           <div className="w-px h-5 bg-gray-200" />
-          <div className="flex items-center gap-2 px-2"><Clock className="w-4 h-4 text-[#9C2FDF]" /><span className="text-xs font-semibold text-gray-700">{minutesUsed}m / 500m</span></div>
+          <div className="flex items-center gap-2 px-2">
+            <Clock className={`w-4 h-4 ${minutesRemaining <= 2 ? 'text-red-500 animate-pulse' : 'text-[#9C2FDF]'}`} />
+            <span className={`text-xs font-semibold ${minutesRemaining <= 2 ? 'text-red-600' : 'text-gray-700'}`}>{minutesRemaining}m left</span>
+          </div>
         </div>
       </motion.div>
 
@@ -346,20 +383,20 @@ export default function VoiceAssistantPage() {
 
           <div className="relative flex-1 flex flex-col items-center justify-center py-6">
             <div className="relative flex items-center justify-center w-56 h-56">
-              <motion.div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, #1363CB, #9C2FDF, #1363CB)", WebkitMask: "radial-gradient(circle, transparent 58%, black 60%)", mask: "radial-gradient(circle, transparent 58%, black 60%)", opacity: assistantState === "listening" ? 0.9 : 0.25 }} animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: assistantState === "listening" ? 6 : 22, ease: "linear" }} />
-              {assistantState === "listening" && [0, 0.6, 1.2].map((delay, i) => <motion.div key={i} className="absolute inset-2 rounded-full border border-[#9C2FDF]/40" initial={{ scale: 0.9, opacity: 0.6 }} animate={{ scale: 1.3, opacity: 0 }} transition={{ duration: 2.4, repeat: Infinity, delay, ease: "easeOut" }} />)}
-              <motion.div animate={{ scale: assistantState === "listening" ? [1, 1.05, 1] : 1 }} transition={{ repeat: assistantState === "listening" ? Infinity : 0, duration: 1.8, ease: "easeInOut" }} className={`absolute w-28 h-28 rounded-full flex items-center justify-center z-10 transition-colors duration-500 ${assistantState === "idle" || assistantState === "stopped" ? "bg-gray-100 shadow-inner" : "bg-linear-to-br from-[#1363CB] to-[#9C2FDF] shadow-[0_0_50px_rgba(156,47,223,0.55)]"}`}>
+              <motion.div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(from 0deg, ${minutesRemaining <= 2 ? '#ef4444' : '#1363CB'}, #9C2FDF, ${minutesRemaining <= 2 ? '#ef4444' : '#1363CB'})`, WebkitMask: "radial-gradient(circle, transparent 58%, black 60%)", mask: "radial-gradient(circle, transparent 58%, black 60%)", opacity: assistantState === "listening" ? 0.9 : 0.25 }} animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: assistantState === "listening" ? 6 : 22, ease: "linear" }} />
+              {assistantState === "listening" && [0, 0.6, 1.2].map((delay, i) => <motion.div key={i} className={`absolute inset-2 rounded-full border ${minutesRemaining <= 2 ? 'border-red-500/40' : 'border-[#9C2FDF]/40'}`} initial={{ scale: 0.9, opacity: 0.6 }} animate={{ scale: 1.3, opacity: 0 }} transition={{ duration: 2.4, repeat: Infinity, delay, ease: "easeOut" }} />)}
+              <motion.div animate={{ scale: assistantState === "listening" ? [1, 1.05, 1] : 1 }} transition={{ repeat: assistantState === "listening" ? Infinity : 0, duration: 1.8, ease: "easeInOut" }} className={`absolute w-28 h-28 rounded-full flex items-center justify-center z-10 transition-colors duration-500 ${assistantState === "idle" || assistantState === "stopped" ? "bg-gray-100 shadow-inner" : minutesRemaining <= 2 ? "bg-linear-to-br from-red-500 to-[#9C2FDF] shadow-[0_0_50px_rgba(239,68,68,0.55)]" : "bg-linear-to-br from-[#1363CB] to-[#9C2FDF] shadow-[0_0_50px_rgba(156,47,223,0.55)]"}`}>
                 {assistantState === "loading" || assistantState === "analyzing" ? <Loader2 className="w-10 h-10 text-white animate-spin" /> : assistantState === "stopped" ? <CheckCircle className="w-10 h-10 text-gray-400" /> : <Volume2 className={`w-10 h-10 ${assistantState === "idle" ? "text-gray-400" : "text-white"}`} />}
               </motion.div>
             </div>
 
             <div className="mt-8 h-12 w-full max-w-md flex items-center justify-center gap-0.75">
-              {waveform.map((h, i) => <motion.span key={i} className="w-0.75 rounded-full bg-linear-to-t from-[#1363CB] to-[#9C2FDF]" animate={{ height: assistantState === "listening" ? `${h * 100}%` : assistantState === "paused" ? "20%" : "8%", opacity: assistantState === "idle" ? 0.25 : 1 }} transition={{ duration: 0.18, ease: "easeOut" }} style={{ minHeight: 4 }} />)}
+              {waveform.map((h, i) => <motion.span key={i} className={`w-0.75 rounded-full ${minutesRemaining <= 2 ? 'bg-linear-to-t from-red-500 to-[#9C2FDF]' : 'bg-linear-to-t from-[#1363CB] to-[#9C2FDF]'}`} animate={{ height: assistantState === "listening" ? `${h * 100}%` : assistantState === "paused" ? "20%" : "8%", opacity: assistantState === "idle" ? 0.25 : 1 }} transition={{ duration: 0.18, ease: "easeOut" }} style={{ minHeight: 4 }} />)}
             </div>
 
             <div className="mt-6 text-center">
-              <motion.span key={formattedTime} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} className="text-4xl font-black text-gray-900 font-mono tracking-wider">{formattedTime}</motion.span>
-              <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">/ 500m available</p>
+              <motion.span key={formattedTime} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} className={`text-4xl font-black font-mono tracking-wider ${minutesRemaining <= 2 ? 'text-red-600' : 'text-gray-900'}`}>{formattedTime}</motion.span>
+              <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">/ {availableMinutes}m available</p>
             </div>
 
             <div className="flex flex-col items-center gap-4 mt-8">
@@ -368,7 +405,7 @@ export default function VoiceAssistantPage() {
                   <Square className="w-5 h-5 fill-current" />
                 </motion.button>
                 <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} onClick={toggleStart} disabled={assistantState === "stopped" || assistantState === "analyzing"} className="relative w-20 h-20 rounded-full bg-linear-to-br from-gray-900 to-gray-700 text-white flex items-center justify-center transition-colors shadow-lg shadow-gray-900/30 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {assistantState === "listening" && <motion.span className="absolute inset-0 rounded-full border-2 border-[#9C2FDF]" animate={{ scale: [1, 1.18], opacity: [0.7, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} />}
+                  {assistantState === "listening" && <motion.span className={`absolute inset-0 rounded-full border-2 ${minutesRemaining <= 2 ? 'border-red-500' : 'border-[#9C2FDF]'}`} animate={{ scale: [1, 1.18], opacity: [0.7, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} />}
                   {assistantState === "listening" ? <Pause className="w-7 h-7" /> : <Mic className="w-7 h-7" />}
                 </motion.button>
               </div>

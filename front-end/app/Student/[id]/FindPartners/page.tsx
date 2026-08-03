@@ -2,14 +2,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useMemo, useEffect } from "react";
-import { useParams } from "next/navigation";;
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Calendar, Sparkles, Send, MessageCircleMore,
   Users, TrendingUp, Inbox, Check, X, Clock, ArrowUpRight, Sliders,
-  BrainCircuit, Lightbulb, Loader2
+  BrainCircuit, Lightbulb, Loader2, Video, UserCircle
 } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
@@ -17,13 +17,22 @@ import { ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar, PolarA
 interface TopicAssessment { topic: string; subject: string; score: number; summary: string; }
 interface MatchData {
   id: string; name: string; initials: string; match: number;
-  lookingForTopic?: string[]; topics?: string[]; lookingForSubject?: string[]; subjects?: string[];
+  lookingForTopic?: { name: string; score: number; subject: string }[]; topics?: string[]; lookingForSubject?: string[]; subjects?: string[];
   availability: string; avatarBg: string; learningStyle?: string[];
   personality?: { openness?: number; conscientiousness?: number; extraversion?: number; agreeableness?: number; };
   knowledgeLevel?: { score?: number; feedback?: string; topicBreakdown?: TopicAssessment[]; };
 }
 interface RequestData { id: string; name: string; initials: string; avatarBg: string; subject: string; sentAgo: string; status?: string; receiverId?: string; senderId?: string;}
-interface MessageData { id: string; name: string; initials: string; avatarBg: string; preview: string; time: string; unread: number; partnerId: string;}
+
+// FIX: Added the rich profile fields to the MessageData so they don't get lost!
+interface MessageData { 
+  id: string; name: string; initials: string; avatarBg: string; preview: string; time: string; unread: number; partnerId: string; isOnline?: boolean;
+  lookingForTopic?: { name: string; score: number; subject: string }[];
+  learningStyle?: string[];
+  personality?: any;
+  availability?: string;
+  subjects?: string[];
+}
 interface ChatMessage { id: string; senderId: string; receiverId: string; content: string; time: string; }
 
 // --- VISUAL MOCK DATA (For Charts) ---
@@ -128,11 +137,11 @@ const TABS = [
   { id: "discover", label: "Discover", icon: Sparkles },
   { id: "sent", label: "Sent", icon: Send },
   { id: "received", label: "Received", icon: Inbox },
-  { id: "messages", label: "Messages", icon: MessageCircleMore },
+  { id: "messages", label: "Connections", icon: MessageCircleMore },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = process.env.NEXT_PUBLIC_URL ? `${process.env.NEXT_PUBLIC_URL}/api` : "http://localhost:5000/api";
 
 async function authHeaders(): Promise<HeadersInit> {
   let headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -152,17 +161,21 @@ export default function FindPartnersPage() {
   const [loading, setLoading] = useState<boolean>(true);
   
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const studentId = params?.id;
 
   // INTERACTIVE STATES
   const [activePartner, setActivePartner] = useState<MatchData | null>(null);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const [isChatSlideOverOpen, setIsChatSlideOverOpen] = useState(false);
-
-  // CHAT / CONVERSATION STATE
+  
+  // CHAT / PROFILE SLIDE-OVER STATE
+  const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
+  const [slideOverView, setSlideOverView] = useState<"chat" | "profile">("chat");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [canSendMessage, setCanSendMessage] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
+  const [collabLoading, setCollabLoading] = useState(false);
+
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const counts = useMemo(() => ({ sent: sentRequests.length, received: receivedRequests.length, messages: messages.reduce((a, m) => a + (m.unread || 0), 0) }), [sentRequests, receivedRequests, messages]);
   const avgCompatibility = useMemo(() => matches.length === 0 ? 0 : Math.round(matches.reduce((sum, match) => sum + match.match, 0) / matches.length), [matches]);
@@ -197,15 +210,17 @@ export default function FindPartnersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
 
-  // --- INTERACTION HANDLERS ---
-  
-  const openRequestModal = (partner: MatchData) => {
-    setActivePartner(partner);
-    setIsRequestModalOpen(true);
-  };
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (chatScrollRef.current && slideOverView === "chat") {
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, isSlideOverOpen, slideOverView]);
 
+  // --- INTERACTION HANDLERS ---
+
+  // Opens the Chat slide-over AND sets the view to "chat"
   const openChatSlideOver = async (partnerId: string) => {
-    // Find the partner info either from matches or messages
     let resolvedPartner: MatchData | null = null;
     const partnerFromMatches = matches.find(m => m.id === partnerId);
     if (partnerFromMatches) {
@@ -213,11 +228,23 @@ export default function FindPartnersPage() {
     } else {
       const msgPartner = messages.find(m => m.partnerId === partnerId);
       if (msgPartner) {
-        resolvedPartner = { id: msgPartner.partnerId, name: msgPartner.name, initials: msgPartner.initials, avatarBg: msgPartner.avatarBg, match: 0, availability: "Unknown" };
+        resolvedPartner = { 
+            id: msgPartner.partnerId, 
+            name: msgPartner.name, 
+            initials: msgPartner.initials, 
+            avatarBg: msgPartner.avatarBg, 
+            match: 100, 
+            availability: msgPartner.availability || "Flexible",
+            lookingForTopic: msgPartner.lookingForTopic || [],
+            learningStyle: msgPartner.learningStyle || ["Adaptive"],
+            personality: msgPartner.personality || {},
+            subjects: msgPartner.subjects || ["General Studies"]
+        };
       }
     }
     setActivePartner(resolvedPartner);
-    setIsChatSlideOverOpen(true);
+    setSlideOverView("chat"); // Default to Chat
+    setIsSlideOverOpen(true);
     setChatMessages([]);
     setCanSendMessage(true);
 
@@ -231,6 +258,9 @@ export default function FindPartnersPage() {
         const data = await res.json();
         setChatMessages(data.messages || []);
         setCanSendMessage(!!data.canSend);
+        
+        // Mark as read locally
+        setMessages(prev => prev.map(m => m.partnerId === partnerId ? { ...m, unread: 0 } : m));
       }
     } catch (err) {
       console.error("Failed to load conversation", err);
@@ -239,41 +269,43 @@ export default function FindPartnersPage() {
     }
   };
 
-  const handleSendStudyRequest = async (topic: string, note: string) => {
-    if (!activePartner || !studentId) return;
+  const handleSendStudyRequest = async (topic: string, partnerId: string) => {
+    if (!studentId) return;
     
-    // 1. Optimistic UI Update (Shows immediately in Sent Tab)
-    const newRequest: RequestData = {
-        id: `temp-${Date.now()}`,
-        name: activePartner.name,
-        initials: activePartner.initials,
-        avatarBg: activePartner.avatarBg,
-        subject: `Wants to study: ${topic}`,
-        sentAgo: "Just now",
-        status: "Pending",
-        receiverId: activePartner.id,
-        senderId: studentId
-    };
-    setSentRequests(prev => [newRequest, ...prev]);
-    setIsRequestModalOpen(false); // Close modal
-    setTab("sent"); // Optional: Auto-switch to sent tab to show them it worked
+    // Immediately remove from Discover matches!
+    const targetMatch = matches.find(m => m.id === partnerId);
+    setMatches(prev => prev.filter(m => m.id !== partnerId)); 
+    
+    // Add temporary visual to Sent tab
+    if (targetMatch) {
+      const newRequest: RequestData = {
+          id: `temp-${Date.now()}`,
+          name: targetMatch.name,
+          initials: targetMatch.initials,
+          avatarBg: targetMatch.avatarBg,
+          subject: `Wants to study: ${topic}`,
+          sentAgo: "Just now",
+          status: "Pending",
+          receiverId: targetMatch.id,
+          senderId: studentId
+      };
+      setSentRequests(prev => [newRequest, ...prev]);
+    }
 
-    // 2. Real API Call
     try {
         const headers = await authHeaders();
         const res = await fetch(`${API_BASE}/requests`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ senderId: studentId, receiverId: activePartner.id, topic, message: note })
+            body: JSON.stringify({ senderId: studentId, receiverId: partnerId, topic, message: "Let's study together!" })
         });
         if (!res.ok) throw new Error("Request failed");
-        const saved = await res.json();
-        // Swap the temp id for the real DB id so Cancel works afterward
-        setSentRequests(prev => prev.map(r => r.id === newRequest.id ? { ...r, id: saved.id } : r));
+        
+        // Refresh to get actual DB IDs
+        fetchDashboardData();
     } catch (err) {
         console.error("Failed to send request", err);
-        // Rollback on fail
-        setSentRequests(prev => prev.filter(r => r.id !== newRequest.id));
+        fetchDashboardData(); // Rollback if failed
     }
   };
 
@@ -288,15 +320,17 @@ export default function FindPartnersPage() {
         body: JSON.stringify({ senderId: studentId })
       });
       if (!res.ok) throw new Error("Failed to cancel");
+      fetchDashboardData(); // Refetch to put them back in Discover
     } catch (err) {
       console.error("Failed to cancel request", err);
-      setSentRequests(prevRequests); // rollback
+      setSentRequests(prevRequests); 
     }
   };
 
   const handleRespondToRequest = async (requestId: string, action: 'accept' | 'decline') => {
     const prevRequests = receivedRequests;
     setReceivedRequests(list => list.filter(r => r.id !== requestId));
+    
     try {
       const headers = await authHeaders();
       const res = await fetch(`${API_BASE}/requests/${requestId}/respond`, {
@@ -305,9 +339,13 @@ export default function FindPartnersPage() {
         body: JSON.stringify({ action })
       });
       if (!res.ok) throw new Error("Failed to respond");
+      
+      // FIX: Fetch EVERYTHING fresh from the backend to get their full rich profile!
+      await fetchDashboardData();
+      
     } catch (err) {
       console.error("Failed to respond to request", err);
-      setReceivedRequests(prevRequests); // rollback
+      setReceivedRequests(prevRequests); 
     }
   };
 
@@ -315,15 +353,30 @@ export default function FindPartnersPage() {
     if (!activePartner || !studentId || !canSendMessage) return;
 
     const tempId = `msg-${Date.now()}`;
-
-    // 1. Optimistic UI Update
     setChatMessages(prev => [...prev, { id: tempId, senderId: studentId, receiverId: activePartner.id, content, time: "Just now" }]);
+    
+    // FIX: Preserve rich data when bubbling chat to the top
     setMessages(prev => {
         const filtered = prev.filter(m => m.partnerId !== activePartner.id);
-        return [{ id: tempId, partnerId: activePartner.id, name: activePartner.name, initials: activePartner.initials, avatarBg: activePartner.avatarBg, preview: content, time: "Just now", unread: 0 }, ...filtered];
+        const existing = prev.find(m => m.partnerId === activePartner.id);
+        return [{ 
+            id: tempId, 
+            partnerId: activePartner.id, 
+            name: existing?.name || activePartner.name, 
+            initials: existing?.initials || activePartner.initials, 
+            avatarBg: existing?.avatarBg || activePartner.avatarBg, 
+            preview: content, 
+            time: "Just now", 
+            unread: 0,
+            isOnline: existing?.isOnline || false,
+            lookingForTopic: existing?.lookingForTopic || activePartner.lookingForTopic,
+            learningStyle: existing?.learningStyle || activePartner.learningStyle,
+            personality: existing?.personality || activePartner.personality,
+            availability: existing?.availability || activePartner.availability,
+            subjects: existing?.subjects || activePartner.subjects
+        }, ...filtered];
     });
 
-    // 2. Real API Call
     try {
         const headers = await authHeaders();
         const res = await fetch(`${API_BASE}/messages`, {
@@ -334,10 +387,8 @@ export default function FindPartnersPage() {
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            // Roll back the optimistic message and lock the composer
             setChatMessages(prev => prev.filter(m => m.id !== tempId));
-            setCanSendMessage(false);
-            alert(err.error || "You can only send one message until they reply.");
+            alert(err.error || "Failed to send.");
         }
     } catch (err) {
         console.error("Failed to send message", err);
@@ -345,11 +396,46 @@ export default function FindPartnersPage() {
     }
   };
 
+  const handleLaunchCollab = async () => {
+    if (!activePartner || !studentId) return;
+    setCollabLoading(true);
+    
+    try {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE}/sessions/create`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ 
+                hostId: studentId, 
+                participantIds: [activePartner.id], 
+                title: `Study Session with ${activePartner.name}`, 
+                subject: "Collaborative Study", 
+                startTime: new Date().toISOString() 
+            })
+        });
+
+        if (res.ok) {
+            const session = await res.json();
+            await handleSendChatMessage(`I've started a live collaboration room! Join me here.`);
+            router.push(`/Student/${studentId}/Sessions/${session.id}`);
+        } else {
+            const err = await res.json();
+            alert(err.error || "Failed to create room.");
+            setCollabLoading(false);
+        }
+    } catch (err) {
+        console.error("Collab launch error", err);
+        alert("Network error creating room.");
+        setCollabLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fafafb]">
       <div className="max-w-7xl mx-auto space-y-8 pb-16 px-4 md:px-8 relative">
-        {/* HEADER & STATS (Unchanged) */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        
+        {/* HEADER */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Find Study Partners</h1>
@@ -361,6 +447,7 @@ export default function FindPartnersPage() {
           </div>
         </motion.div>
 
+        {/* STATS ROW */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <StatCard icon={Users} label="Total Matches" value={matches.length.toString()} delay={0.05}><Sparkline color="#4f55ee" /></StatCard>
           <StatCard icon={TrendingUp} label="Acceptance Rate" value={`${acceptanceRate}%`} trend={sentRequests.length > 0 ? undefined : "0 requests"} delay={0.12}><Sparkline color="#9c2fdf" /></StatCard>
@@ -386,12 +473,12 @@ export default function FindPartnersPage() {
         </div>
 
         {/* TABS MENU */}
-        <div className="flex items-center gap-1 p-1 rounded-2xl bg-white border border-[#00000010] shadow-sm w-fit relative">
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-white border border-[#00000010] shadow-sm w-fit relative overflow-x-auto max-w-full hide-scrollbar">
           {TABS.map((t) => {
             const active = tab === t.id;
             const badge = t.id === "sent" ? counts.sent : t.id === "received" ? counts.received : t.id === "messages" ? counts.messages : 0;
             return (
-              <button key={t.id} onClick={() => setTab(t.id)} className={`relative px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors ${active ? "text-white" : "text-gray-600 hover:text-gray-900"}`}>
+              <button key={t.id} onClick={() => setTab(t.id)} className={`relative px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors whitespace-nowrap ${active ? "text-white" : "text-gray-600 hover:text-gray-900"}`}>
                 {active && <motion.div layoutId="tab-pill" className="absolute inset-0 rounded-xl bg-linear-to-br from-[#4f55ee] to-[#9c2fdf] shadow-[0_6px_18px_-6px_rgba(79,85,238,0.5)]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
                 <span className="relative flex items-center gap-2">
                   <t.icon className="w-4 h-4" />{t.label}
@@ -405,124 +492,127 @@ export default function FindPartnersPage() {
         {/* TAB CONTENT */}
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}>
-            {tab === "discover" && <DiscoverTab matches={matches} loading={loading} onOpenRequest={openRequestModal} onOpenChat={openChatSlideOver} />}
+            {tab === "discover" && <DiscoverTab matches={matches} loading={loading} onSendRequest={handleSendStudyRequest} />}
             {tab === "sent" && <SentTab requests={sentRequests} loading={loading} onCancel={handleCancelRequest} />}
             {tab === "received" && <ReceivedTab requests={receivedRequests} loading={loading} onRespond={handleRespondToRequest} />}
             {tab === "messages" && <MessagesTab messages={messages} loading={loading} onOpenChat={openChatSlideOver} />}
           </motion.div>
         </AnimatePresence>
 
-        {/* --- MODALS OVERLAYS --- */}
-        
-        {/* 1. Request Modal (Centered Popup) */}
+        {/* --- MULTI-VIEW SLIDE-OVER (Chat & Profile) --- */}
         <AnimatePresence>
-            {isRequestModalOpen && activePartner && (
+            {isSlideOverOpen && activePartner && (
                 <>
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsRequestModalOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
-                    <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[24px] shadow-2xl z-50 overflow-hidden border border-gray-100">
-                        {/* Modal Header */}
-                        <div className="bg-gray-50/50 p-6 border-b border-gray-100 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900">Send Study Request</h3>
-                                <p className="text-sm text-gray-500">to {activePartner.name}</p>
-                            </div>
-                            <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} />
-                        </div>
-                        {/* Modal Form */}
-                        <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); handleSendStudyRequest(fd.get('topic') as string, fd.get('note') as string); }} className="p-6 space-y-5">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">What do you want to study?</label>
-                                <select name="topic" required className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-violet-500 outline-none text-sm font-medium">
-                                      {(activePartner.topics || activePartner.lookingForTopic || ["General Studies"]).map((t: any) => {
-                                          // Safe extraction: if it's the rich object, grab .name. If it's a fallback string, just use it.
-                                          const topicName = typeof t === 'string' ? t : t.name;
-                                          return (
-                                              <option key={topicName} value={topicName}>
-                                                  {topicName}
-                                              </option>
-                                          );
-                                      })}
-                                  </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Add a quick note (Optional)</label>
-                                <textarea name="note" rows={3} placeholder="Hey! Saw we both need help with..." className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-violet-500 outline-none text-sm font-medium resize-none" />
-                            </div>
-                            <div className="flex gap-3 pt-2">
-                                <button type="button" onClick={() => setIsRequestModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-                                <button type="submit" className="flex-2 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-white bg-linear-to-br from-[#4f55ee] to-[#9c2fdf] hover:shadow-lg transition-all">Send Request <Send className="w-4 h-4"/></button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
-
-        {/* 2. Direct Messaging Slide-over (Instagram style) */}
-        <AnimatePresence>
-            {isChatSlideOverOpen && activePartner && (
-                <>
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsChatSlideOverOpen(false)} className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-40" />
-                    <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-gray-100">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSlideOverOpen(false)} className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-40" />
+                    <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed top-0 right-0 h-full w-[90%] max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-gray-100">
                         
-                        {/* Chat Header */}
-                        <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-white">
+                        {/* Slide-over Header */}
+                        <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-white shadow-sm z-10">
                             <div className="flex items-center gap-3">
                                 <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} />
                                 <div>
                                     <h2 className="text-md font-bold text-gray-900 leading-tight">{activePartner.name}</h2>
-                                    <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Online</p>
+                                    <p className="text-xs font-semibold flex items-center gap-1 mt-0.5">
+                                      {messages.find(m => m.partnerId === activePartner.id)?.isOnline ? (
+                                        <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/> <span className="text-emerald-500">Online</span></>
+                                      ) : (
+                                        <><span className="w-1.5 h-1.5 rounded-full bg-gray-300"/> <span className="text-gray-400">Offline</span></>
+                                      )}
+                                    </p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsChatSlideOverOpen(false)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+                            <div className="flex items-center gap-1.5">
+                              {/* TOGGLE PROFILE / CHAT BUTTON */}
+                              <button 
+                                onClick={() => setSlideOverView(prev => prev === "chat" ? "profile" : "chat")} 
+                                title={slideOverView === "chat" ? "View Profile Details" : "Back to Chat"}
+                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all"
+                              >
+                                {slideOverView === "chat" ? <UserCircle className="w-5 h-5" /> : <MessageCircleMore className="w-5 h-5" />}
+                              </button>
+
+                              {/* LAUNCH COLLAB BUTTON */}
+                              {slideOverView === "chat" && (
+                                <button 
+                                  onClick={handleLaunchCollab} 
+                                  disabled={collabLoading}
+                                  title="Start live study room"
+                                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-linear-to-r from-blue-50 text-blue-600 hover:from-blue-600 hover:text-white border border-blue-100 transition-all disabled:opacity-50"
+                                >
+                                  {collabLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+                                </button>
+                              )}
+                              <button onClick={() => setIsSlideOverOpen(false)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+                            </div>
                         </div>
                         
-                        {/* Chat Body (Scrollable) - real conversation history, no fake auto-message */}
-                        <div className="flex-1 overflow-y-auto p-5 bg-gray-50/50 flex flex-col gap-4">
-                            <div className="text-center my-2">
-                                <span className="px-3 py-1 bg-gray-200/50 text-gray-500 text-[10px] font-bold uppercase tracking-wider rounded-full">
-                                    {chatLoading ? "Loading..." : chatMessages.length === 0 ? "No messages yet" : "Conversation"}
-                                </span>
-                                {!chatLoading && !canSendMessage && chatMessages.length > 0 && (
-                                    <p className="text-xs text-amber-500 mt-2 font-semibold">
-                                        Waiting for {activePartner.name} to reply before you can send another message.
-                                    </p>
-                                )}
-                                {!chatLoading && chatMessages.length === 0 && (
-                                    <p className="text-xs text-gray-400 mt-2">
-                                        Sending a message acts as an instant connection request &mdash; you can send one until they reply.
-                                    </p>
-                                )}
+                        {/* Slide-over Body: Conditionally render Chat OR Profile */}
+                        {slideOverView === "chat" ? (
+                          <>
+                            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-5 bg-gray-50/50 flex flex-col gap-4">
+                                <div className="text-center my-2">
+                                    <span className="px-3 py-1 bg-gray-200/50 text-gray-500 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                                        {chatLoading ? "Loading..." : chatMessages.length === 0 ? "No messages yet" : "End-to-End Encrypted"}
+                                    </span>
+                                </div>
+
+                                {chatLoading && <div className="flex-1 flex items-center justify-center"><Loader2 className="size-8 text-violet-600 animate-spin" /></div>}
+
+                                {!chatLoading && chatMessages.map((m) => {
+                                    const isMine = m.senderId === studentId;
+                                    return (
+                                        <div key={m.id} className={`flex items-end gap-2 max-w-[85%] ${isMine ? "self-end flex-row-reverse" : ""}`}>
+                                            {!isMine && <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} />}
+                                            <div className={`p-3 text-[15px] shadow-sm ${isMine ? "bg-violet-600 text-white rounded-2xl rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm"}`}>
+                                                {m.content}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
-                            {chatLoading && (
-                                <div className="flex-1 flex items-center justify-center">
-                                    <Loader2 className="size-10 text-violet-600 animate-spin" />
+                            <div className="p-4 border-t border-gray-100 bg-white">
+                                <form onSubmit={(e) => { e.preventDefault(); if (!canSendMessage) return; const el = e.currentTarget.elements.namedItem('msg') as HTMLInputElement; if(el.value.trim()) { handleSendChatMessage(el.value); el.value = ''; } }} className="flex items-end gap-2">
+                                    <textarea name="msg" rows={1} disabled={!canSendMessage} placeholder={canSendMessage ? "Type a message..." : "Waiting for reply..."} className="flex-1 bg-gray-100 border-transparent focus:bg-white focus:border-violet-300 focus:ring-2 focus:ring-violet-100 rounded-[20px] px-4 py-3 text-[15px] outline-none resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
+                                    <button type="submit" disabled={!canSendMessage} className="w-11 h-11 shrink-0 flex items-center justify-center bg-violet-600 text-white rounded-full hover:bg-violet-700 transition-colors shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
+                                        <Send className="w-4 h-4 ml-0.5" />
+                                    </button>
+                                </form>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex-1 overflow-y-auto p-6 bg-white space-y-8">
+                             <div>
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Availability</h3>
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold border border-blue-100">
+                                  <Calendar className="w-4 h-4" /> {activePartner.availability}
                                 </div>
-                            )}
+                             </div>
 
-                            {!chatLoading && chatMessages.map((m) => {
-                                const isMine = m.senderId === studentId;
-                                return (
-                                    <div key={m.id} className={`flex items-end gap-2 max-w-[85%] ${isMine ? "self-end flex-row-reverse" : ""}`}>
-                                        {!isMine && <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} />}
-                                        <div className={`p-3 text-sm shadow-sm ${isMine ? "bg-violet-600 text-white rounded-2xl rounded-br-sm" : "bg-white border border-gray-100 text-gray-700 rounded-2xl rounded-tl-sm"}`}>
-                                            {m.content}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                             <div>
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Traits & Style</h3>
+                                <div className="flex flex-wrap gap-2">
+                                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-sm font-bold border border-gray-200">
+                                    <Lightbulb className="w-4 h-4" /> {activePartner.learningStyle?.[0] || "Adaptive"}
+                                  </span>
+                                  {getPersonalityLabels(activePartner.personality).map((trait, i) => (
+                                    <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-sm font-bold border border-orange-100">
+                                      <BrainCircuit className="w-4 h-4" /> {trait}
+                                    </span>
+                                  ))}
+                                </div>
+                             </div>
 
-                        {/* Chat Input Area */}
-                        <div className="p-4 border-t border-gray-100 bg-white">
-                            <form onSubmit={(e) => { e.preventDefault(); if (!canSendMessage) return; const el = e.currentTarget.elements.namedItem('msg') as HTMLInputElement; if(el.value.trim()) { handleSendChatMessage(el.value); el.value = ''; } }} className="flex items-end gap-2">
-                                <textarea name="msg" rows={1} disabled={!canSendMessage} placeholder={canSendMessage ? "Type a message..." : "Waiting for reply..."} className="flex-1 bg-gray-100 border-transparent focus:bg-white focus:border-violet-300 focus:ring-2 focus:ring-violet-100 rounded-[20px] px-4 py-3 text-sm outline-none resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
-                                <button type="submit" disabled={!canSendMessage} className="w-11 h-11 shrink-0 flex items-center justify-center bg-violet-600 text-white rounded-full hover:bg-violet-700 transition-colors shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
-                                    <Send className="w-4 h-4 ml-0.5" />
-                                </button>
-                            </form>
-                        </div>
+                             <div>
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Top Knowledge Areas</h3>
+                                {activePartner.lookingForTopic && activePartner.lookingForTopic.length > 0 ? (
+                                  activePartner.lookingForTopic.map((t: any, i: number) => <KnowledgeBar key={i} topic={t.name} score={t.score} />)
+                                ) : (
+                                  <p className="text-sm text-gray-500 italic">No specific topic data available yet.</p>
+                                )}
+                             </div>
+                          </div>
+                        )}
                     </motion.div>
                 </>
             )}
@@ -535,9 +625,8 @@ export default function FindPartnersPage() {
 
 // --- TAB COMPONENTS ---
 
-// 1. DISCOVER TAB (Passed the new Interactive Handlers)
-function DiscoverTab({ matches, loading, onOpenRequest, onOpenChat }: { matches: MatchData[], loading: boolean, onOpenRequest: (p: MatchData)=>void, onOpenChat: (id: string)=>void }) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// 1. DISCOVER TAB
+function DiscoverTab({ matches, loading, onSendRequest }: { matches: MatchData[], loading: boolean, onSendRequest: (topic: string, id: string)=>void }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   return (
@@ -548,7 +637,7 @@ function DiscoverTab({ matches, loading, onOpenRequest, onOpenChat }: { matches:
           <input type="text" placeholder="Search by name, subject, or skills..." className="w-full pl-11 pr-4 py-3 rounded-[15px] border border-[#00000020] bg-white focus:ring-2 focus:ring-[#4f55ee]/20 focus:border-[#4f55ee] outline-none text-sm font-medium transition-all shadow-sm" />
         </div>
         <div className="flex gap-4">
-          <button onClick={() => setIsFilterOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-[15px] border border-[#00000020] bg-white text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm shrink-0">
+          <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="flex items-center gap-2 px-5 py-3 rounded-[15px] border border-[#00000020] bg-white text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm shrink-0">
             <Sliders className="w-4 h-4 text-gray-500" />
             <span className="hidden sm:inline">Filters</span>
           </button>
@@ -568,54 +657,42 @@ function DiscoverTab({ matches, loading, onOpenRequest, onOpenChat }: { matches:
             const personalityTraits = getPersonalityLabels(partner.personality);
             const primaryLearningStyle = partner.learningStyle?.[0] || "Adaptive";
 
-            const rawTopics = partner.topics || partner.lookingForTopic || [];
-            const rawSubjects = partner.subjects || partner.lookingForSubject || ["General Studies"];
-            const baseScore = partner.knowledgeLevel?.score ?? 50;
-
-            let allTopics: TopicAssessment[] = [];
-            if (partner.knowledgeLevel?.topicBreakdown && Array.isArray(partner.knowledgeLevel.topicBreakdown) && partner.knowledgeLevel.topicBreakdown.length > 0) {
-              allTopics = [...partner.knowledgeLevel.topicBreakdown].sort((a, b) => b.score - a.score);
-            } else if (rawTopics.length > 0) {
-              allTopics = rawTopics.map(topic => ({ topic, subject: rawSubjects[0], score: baseScore, summary: "" }));
-            }
+            const allTopics = partner.lookingForTopic || [];
             const topTopicsForBars = allTopics.slice(0, 2);
             const remainingTopics = allTopics.slice(2);
 
             return (
               <motion.div key={partner.id} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: idx * 0.05, ease: [0.22, 1, 0.36, 1] }} whileHover={{ y: -4 }} className="relative bg-white rounded-[22px] border border-[#00000010] p-6 shadow-sm hover:shadow-xl hover:border-[#4f55ee]/20 transition-all duration-500 flex flex-col overflow-hidden">
-                {/* Header */}
                 <div className="relative flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <Avatar initials={partner.initials} bg={partner.avatarBg} />
                     <div>
                       <h3 className="font-bold text-gray-900 leading-tight">{partner.name}</h3>
-                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5 truncate max-w-35">{rawSubjects.join(", ")}</p>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5 truncate max-w-35">{partner.lookingForSubject?.[0] || "General Studies"}</p>
                     </div>
                   </div>
                   <MatchRadial value={partner.match} />
                 </div>
 
-                {/* Profile Tags */}
                 <div className="flex flex-wrap gap-1.5 mb-5">
                   <span className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold border border-blue-100"><Lightbulb className="w-3 h-3" /> {primaryLearningStyle}</span>
                   {personalityTraits.map((trait, i) => <span key={i} className="flex items-center gap-1 px-2.5 py-1 bg-orange-50 text-orange-600 rounded-md text-[10px] font-bold border border-orange-100"><BrainCircuit className="w-3 h-3" /> {trait}</span>)}
                 </div>
 
-                {/* Knowledge Levels */}
                 <div className="flex-1 space-y-2">
                   {topTopicsForBars.length > 0 && (
                     <div className="mb-4">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Top Strengths</p>
-                      {topTopicsForBars.map((t, i) => <KnowledgeBar key={i} topic={t.topic} score={t.score} />)}
+                      {topTopicsForBars.map((t: any, i: number) => <KnowledgeBar key={i} topic={t.name} score={t.score} />)}
                     </div>
                   )}
                   {remainingTopics.length > 0 && (
                     <div>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Other Topics</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {remainingTopics.map((t, i) => (
+                        {remainingTopics.map((t: any, i: number) => (
                           <div key={`rem-${i}`} className="group relative">
-                            <span className="px-2.5 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold border border-gray-200 cursor-default inline-block">{t.topic}</span>
+                            <span className="px-2.5 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold border border-gray-200 cursor-default inline-block">{t.name}</span>
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-gray-900 text-white text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-20 shadow-lg">Score: {Math.round(t.score)}%<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" /></div>
                           </div>
                         ))}
@@ -624,15 +701,11 @@ function DiscoverTab({ matches, loading, onOpenRequest, onOpenChat }: { matches:
                   )}
                 </div>
 
-                {/* INTERACTIVE BUTTONS */}
                 <div className="relative mt-5 pt-4 border-t border-gray-100 space-y-4">
                   <div className="flex items-center gap-2 text-gray-500"><Calendar className="w-4 h-4 text-gray-400" /><span className="text-sm font-medium">{partner.availability || "Flexible"}</span></div>
                   <div className="flex gap-2">
-                    <button onClick={() => onOpenRequest(partner)} className="group border-2 bg-primary-linear w-full px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all rounded-xl">
-                      <span className="group-hover:text-primary-linear flex gap-1 items-center justify-around font-semibold">Send Request <Send className="w-4 h-4 group-hover:text-primary-color" /> </span>
-                    </button>
-                    <button onClick={() => onOpenChat(partner.id)} className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:border-gray-900 transition-colors shrink-0">
-                      <MessageCircleMore className="w-5 h-5" />
+                    <button onClick={() => onSendRequest(partner.lookingForSubject?.[0] || "General Studies", partner.id)} className="group border-2 bg-linear-to-r from-[#4f55ee] to-[#9c2fdf] w-full px-6 py-2 text-white hover:opacity-90 transition-all rounded-xl">
+                      <span className="flex gap-1 items-center justify-center font-semibold">Connect <Send className="w-4 h-4 ml-1" /> </span>
                     </button>
                   </div>
                 </div>
@@ -687,19 +760,21 @@ function ReceivedTab({ requests, loading, onRespond }: { requests: RequestData[]
 
 function MessagesTab({ messages, loading, onOpenChat }: { messages: MessageData[], loading: boolean, onOpenChat: (id: string)=>void }) {
   if (loading) return <div className="py-10 text-center"><Loader2 className="size-10 text-violet-600 animate-spin mx-auto"/></div>;
-  if (messages.length === 0) return (<div className="py-16 flex flex-col items-center justify-center text-gray-500 text-center"><MessageCircleMore className="w-10 h-10 text-gray-300 mb-3" /><p className="font-bold text-lg text-gray-800">No messages yet</p><p className="text-sm">Start a conversation with a study partner to see it here.</p></div>);
+  if (messages.length === 0) return (<div className="py-16 flex flex-col items-center justify-center text-gray-500 text-center"><Users className="w-10 h-10 text-gray-300 mb-3" /><p className="font-bold text-lg text-gray-800">No connections yet</p><p className="text-sm">When someone accepts your request, they will appear here.</p></div>);
   return (
     <ListShell>
       {messages.map((m, i) => (
         <Row key={m.id} delay={i * 0.05}>
-          <Avatar initials={m.initials} bg={m.avatarBg} />
-          <div className="flex-1 min-w-0">
+          <div className="relative">
+            <Avatar initials={m.initials} bg={m.avatarBg} />
+            {m.isOnline && <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>}
+          </div>
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onOpenChat(m.partnerId)}>
             <div className="flex items-center gap-2"><p className="font-semibold text-gray-900 truncate">{m.name}</p>{m.unread > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700">{m.unread}</span>}</div>
             <p className="text-sm text-gray-500 truncate">{m.preview}</p>
           </div>
           <span className="text-xs text-gray-400 font-medium shrink-0">{m.time}</span>
-          {/* OPEN CHAT SLIDE-OVER */}
-          <button onClick={() => onOpenChat(m.partnerId)} className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-3 py-1.5 rounded-lg border border-violet-100 bg-violet-50 hover:bg-violet-100 transition-colors">Open</button>
+          <button onClick={() => onOpenChat(m.partnerId)} className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-3 py-1.5 rounded-lg border border-violet-100 bg-violet-50 hover:bg-violet-100 transition-colors">Chat</button>
         </Row>
       ))}
     </ListShell>
