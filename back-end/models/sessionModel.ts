@@ -156,26 +156,53 @@ export const SessionModel = {
         };
     },
 
+    logCollabSessionUsage: async (userId: string, sessionId: string, durationMins: number) => {
+        return await prisma.$transaction([
+            prisma.userCredits.update({
+                where: { userId },
+                data: { dailyMinutesRemaining: { decrement: durationMins } }
+            }),
+            prisma.usageLog.create({
+                data: {
+                    userId,
+                    service: 'daily',
+                    usage: durationMins,
+                    cost: 0,
+                    sessionId
+                }
+            })
+        ]);
+    },
+
     processVoiceSession: async ( 
-        userId: string, 
-        summary: string, 
-        recordingUrl: string, 
-        structuredData: any, 
-        selectedTopic: string, 
-        transcriptsArray: any[],
-        sessionStartTime: Date,
-        sessionEndTime: Date) => {
+        userId: string, summary: string, recordingUrl: string, structuredData: any, 
+        selectedTopic: string, transcriptsArray: any[], sessionStartTime: Date, sessionEndTime: Date
+    ) => {
         const profile = await prisma.profile.findUnique({ where: { userId } });
         if (!profile) throw new Error("Profile not found");
     
+        const durationMins = Math.max(1, Math.ceil((sessionEndTime.getTime() - sessionStartTime.getTime()) / 60000));
+
+        try {
+            await prisma.$transaction([
+                prisma.userCredits.update({
+                    where: { userId },
+                    data: { vapiMinutesRemaining: { decrement: durationMins } }
+                }),
+                prisma.usageLog.create({
+                    data: { userId, service: 'vapi', usage: durationMins, cost: 0 }
+                })
+            ]);
+        } catch (creditErr) {
+            console.error("Failed to deduct VAPI credits:", creditErr);
+        }
+
         const focusScore = structuredData?.focusScore ?? 85;
         const knowledgeScore = structuredData?.knowledgeScore ?? 85;
         const weeklyGoal = structuredData?.weeklyGoal || "Review session concepts.";
         const flashcards = structuredData?.flashcards || [];
-        const topicAssessments = Array.isArray(structuredData?.topicAssessments) ? structuredData.topicAssessments : [];
         const sessionInsight = structuredData?.sessionInsight || null;
-    
-        // --- 1. Merge Big Five personality (running average with prior scores) ---
+
         const priorPersonality = (profile.personality as any) || {};
         const newBigFive = structuredData?.bigFivePersonality || {};
         const mergedPersonality = { ...priorPersonality };
@@ -186,41 +213,35 @@ export const SessionModel = {
                 mergedPersonality[trait] = Math.round((prior + newBigFive[trait]) / 2);
             }
         });
-    
-        if (structuredData?.personalityReasoning) {
-            mergedPersonality.reasoning = structuredData.personalityReasoning;
-        }
+        if (structuredData?.personalityReasoning) mergedPersonality.reasoning = structuredData.personalityReasoning;
         mergedPersonality.updatedAt = new Date().toISOString();
     
-        // --- 2. Merge learning style ---
         let newLearningStyle = profile.learningStyle;
-        if (structuredData?.learningPattern) {
-            newLearningStyle = [structuredData.learningPattern];
-        }
+        if (structuredData?.learningPattern) newLearningStyle = [structuredData.learningPattern];
     
-        // --- 3. Merge knowledgeLevel (overall score + per-topic breakdown) ---
+        // --- FIX: FORCE KNOWLEDGE LEVEL TO ONLY TRACK THE SELECTED TOPIC ---
         const currentKnowledge = (profile.knowledgeLevel as any) || { score: 50, topicBreakdown: [] };
-        const priorBreakdown: any[] = Array.isArray(currentKnowledge.topicBreakdown) ? currentKnowledge.topicBreakdown : [];
-    
-        const mergedBreakdown = [...priorBreakdown];
-        const sessionTopics = topicAssessments.length > 0
-            ? topicAssessments
-            : [{ topic: selectedTopic, subject: selectedTopic, score: knowledgeScore, summary: structuredData?.knowledgeFeedback || "" }];
-    
-        sessionTopics.forEach((ta: any) => {
-            const existingIdx = mergedBreakdown.findIndex((b) => b.topic === ta.topic);
-            if (existingIdx !== -1) {
-                // Running average against the prior score for this specific topic
-                mergedBreakdown[existingIdx] = {
-                    ...mergedBreakdown[existingIdx],
-                    score: Math.round((mergedBreakdown[existingIdx].score + ta.score) / 2),
-                    summary: ta.summary,
-                    subject: ta.subject || mergedBreakdown[existingIdx].subject
-                };
-            } else {
-                mergedBreakdown.push(ta);
-            }
-        });
+        const mergedBreakdown: any[] = Array.isArray(currentKnowledge.topicBreakdown) ? [...currentKnowledge.topicBreakdown] : [];
+        
+        // Look to see if this broad topic is already in their breakdown
+        const existingIdx = mergedBreakdown.findIndex((b) => b.topic.toLowerCase().trim() === selectedTopic.toLowerCase().trim());
+        
+        if (existingIdx !== -1) {
+            mergedBreakdown[existingIdx] = {
+                ...mergedBreakdown[existingIdx],
+                // Average out the score with the new session score
+                score: Math.round((mergedBreakdown[existingIdx].score + knowledgeScore) / 2),
+                summary: structuredData?.knowledgeFeedback || mergedBreakdown[existingIdx].summary
+            };
+        } else {
+            // Push the broad selected topic cleanly
+            mergedBreakdown.push({
+                topic: selectedTopic,
+                subject: profile.subjects[0] || "General Studies",
+                score: knowledgeScore,
+                summary: structuredData?.knowledgeFeedback || ""
+            });
+        }
     
         const overallScore = mergedBreakdown.length > 0
             ? Math.round(mergedBreakdown.reduce((sum, b) => sum + (b.score || 0), 0) / mergedBreakdown.length)
@@ -233,17 +254,18 @@ export const SessionModel = {
             feedback: structuredData?.knowledgeFeedback || currentKnowledge.feedback
         };
     
-        // --- 4. Topics list ---
-        const updatedTopics = profile.topics.includes(selectedTopic) ? profile.topics : [...profile.topics, selectedTopic];
+        // --- FIX: AUTOMATICALLY ADD CUSTOM TOPICS TO PERMANENT PROFILE ---
+        const updatedTopics = profile.topics.includes(selectedTopic) 
+            ? profile.topics 
+            : [...profile.topics, selectedTopic];
     
-        // --- 5. Weekly goal (academicGoals field doubles as the rolling weekly-goal log) ---
         const updatedGoals = `${profile.academicGoals}\n[Week of ${new Date().toLocaleDateString()}]: ${weeklyGoal}`;
     
         const updatedProfile = await prisma.profile.update({
             where: { userId },
             data: {
                 academicGoals: updatedGoals,
-                topics: updatedTopics,
+                topics: updatedTopics, // Saving the merged broad topics
                 knowledgeLevel: updatedKnowledge,
                 learningStyle: newLearningStyle,
                 personality: mergedPersonality,
@@ -251,7 +273,6 @@ export const SessionModel = {
             }
         });
     
-        // --- 6. Save session + analysis record ---
         const newSession = await prisma.session.create({
             data: {
                 hostId: userId,
@@ -266,29 +287,18 @@ export const SessionModel = {
                         transcriptUrl: JSON.stringify(transcriptsArray),
                         summary: summary,
                         topics: [selectedTopic],
-                        participantMetrics: { 
-                            focus: focusScore, 
-                            participation: "Active",
-                            insight: sessionInsight
-                        },
-                        knowledgeDemonstrated: {
-                            score: knowledgeScore,
-                            strengths: sessionTopics.map((ta: any) => ({ subject: ta.topic, proficiency: ta.score }))
-                        },
+                        participantMetrics: { focus: focusScore, participation: "Active", insight: sessionInsight },
+                        knowledgeDemonstrated: { score: knowledgeScore, strengths: [{ subject: selectedTopic, proficiency: knowledgeScore }] },
                         profileUpdates: {
                             nextSteps: weeklyGoal,
                             learningStyleHint: structuredData?.learningPattern || "Adaptive",
-                            exhibitedTraits: Object.entries(newBigFive)
-                                .filter(([, v]) => typeof v === "number")
-                                .map(([trait, v]) => `${trait}: ${v}`)
+                            exhibitedTraits: Object.entries(newBigFive).filter(([, v]) => typeof v === "number").map(([trait, v]) => `${trait}: ${v}`)
                         },
                         flashcardsGenerated: flashcards
                     }
                 }
             },
-            include: {
-                analysis: true
-            }
+            include: { analysis: true }
         });
     
         return { profile: updatedProfile, session: newSession };

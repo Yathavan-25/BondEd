@@ -39,11 +39,14 @@ model Profile {
   subjects         String[]
   availability     Json
   academicGoals    String
+  lastSeen         DateTime @default(now())
   updatedAt        DateTime @updatedAt
   sentRequests     Request[] @relation("SentRequests")
   receivedRequests Request[] @relation("ReceivedRequests")
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+  connections1     Connection[] @relation("Connections1")
+  connections2     Connection[] @relation("Connections2")
 }
 
 model UserCredits {
@@ -122,7 +125,7 @@ model CachedImage {
   @@index([keywords])
 }
 
-// ADD THE FULL REQUEST MODEL
+
 model Request {
   id         String   @id @default(cuid())
   senderId   String
@@ -139,7 +142,6 @@ model Request {
   @@index([receiverId])
 }
 
-// ADD THE FULL MESSAGE MODEL
 model Message {
   id         String   @id @default(cuid())
   senderId   String
@@ -153,4 +155,18 @@ model Message {
 
   @@index([senderId])
   @@index([receiverId])
+}
+
+model Connection {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  createdAt DateTime @default(now())
+
+  user1     Profile  @relation("Connections1", fields: [user1Id], references: [userId])
+  user2     Profile  @relation("Connections2", fields: [user2Id], references: [userId])
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
 }

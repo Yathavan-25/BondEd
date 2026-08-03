@@ -54,32 +54,45 @@ const calculateBigFiveScore = (p1: any, p2: any): number => {
     return Math.min(1.0, finalPsychScore + aBonus);
 }
 
-export const getMatches = async ( req : Request, res : Response ) : Promise<void> => {
-    //retrieve userId from the parameter
+export const getMatches = async (req: Request, res: Response): Promise<void> => {
     const userId = req.params.userId as string;
 
     try {
         const currentUser = await prisma.profile.findUnique({
             where : { userId },
             include : { user : true}
-        })
+        });
 
         if(!currentUser) {
-            res.status(400).json({ error : "Profile not found" })
+            res.status(400).json({ error : "Profile not found" });
             return;
         }
-        
-        //Derieve users with same subjects OR topics
+
+        // 1. Fetch Existing Connections & Requests to Filter Them Out
+        const existingConnections = await prisma.connection.findMany({
+            where: { OR: [{ user1Id: userId }, { user2Id: userId }] }
+        });
+        const existingRequests = await prisma.request.findMany({
+            where: { senderId: userId }
+        });
+
+        const excludedUserIds = [
+            userId, // Exclude self
+            ...existingConnections.map(c => c.user1Id === userId ? c.user2Id : c.user1Id), // Exclude friends
+            ...existingRequests.map(r => r.receiverId) // Exclude pending requests
+        ];
+
+        // 2. Fetch Potential Partners (excluding the ones above)
         const potentialPartners = await prisma.profile.findMany({
             where : {
-                userId : { not : userId },
+                userId: { notIn: excludedUserIds }, // THE MAGIC FILTER!
                 OR : [
                     { topics : { hasSome : currentUser.topics }},
                     { subjects : { hasSome : currentUser.subjects }}
                 ],
             },
             include : { user : true }
-        })
+        });
 
         const matches = potentialPartners.map( partner => {
             let score = 0;

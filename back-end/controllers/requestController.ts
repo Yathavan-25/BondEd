@@ -111,25 +111,93 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
         const userId = getStringParam(req.params.userId);
         if (!userId) { res.status(400).json({ error: "User ID is missing" }); return; }
 
-        const messages = await RequestModel.findAllMessagesByUserId(userId);
-        res.json(messages.map(m => {
-            const isSender = m.senderId === userId;
-            const otherPerson = isSender ? m.receiver.user : m.sender.user;
-            const partnerId = isSender ? m.receiverId : m.senderId;
+        // Fetch all established friends
+        const connections = await RequestModel.findUserConnections(userId);
+        
+        const friendsData = await Promise.all(connections.map(async (c) => {
+            const isUser1 = c.user1Id === userId;
+            const friendProfile = isUser1 ? c.user2 : c.user1;
+            const friendUser = friendProfile.user;
+            const partnerId = isUser1 ? c.user2Id : c.user1Id;
+
+            // Fetch latest message between them
+            const conversation = await RequestModel.findConversation(userId, partnerId);
+            const lastMessage = conversation.length > 0 ? conversation[conversation.length - 1] : null;
+            const unreadCount = conversation.filter(m => m.receiverId === userId && !m.read).length;
+
+            // Determine if online (Last seen within 5 minutes)
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60000);
+            const isOnline = friendProfile.lastSeen > fiveMinutesAgo;
+
+            // --- REPLICATE MATCH CONTROLLER TOPIC MAPPING ---
+            const friendKnowledge = (friendProfile.knowledgeLevel as any)?.score || 50;
+            const breakdown = (friendProfile.knowledgeLevel as any)?.topicBreakdown || [];
+            
+            const unifiedTopics = friendProfile.topics.map(topicName => {
+                const normName = topicName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const found = breakdown.find((b: any) => b.topic.toLowerCase().replace(/[^a-z0-9]/g, '') === normName);
+                
+                return {
+                    name: topicName,
+                    score: found ? found.score : friendKnowledge,
+                    subject: found ? found.subject : (friendProfile.subjects[0] || "General Studies")
+                };
+            });
+            unifiedTopics.sort((a, b) => b.score - a.score);
+
             return {
-                id: m.id,
+                id: c.id,
                 partnerId,
-                name: `${otherPerson.firstName} ${otherPerson.lastName || ''}`.trim(),
-                initials: `${otherPerson.firstName?.[0] || ''}${otherPerson.lastName?.[0] || ''}`.toUpperCase(),
-                avatarBg: "from-indigo-400 to-blue-500",
-                preview: m.content,
-                time: formatTimeAgo(m.createdAt),
-                unread: (!isSender && !m.read) ? 1 : 0
+                name: `${friendUser.firstName} ${friendUser.lastName || ''}`.trim(),
+                initials: `${friendUser.firstName?.[0] || ''}${friendUser.lastName?.[0] || ''}`.toUpperCase(),
+                avatarBg: "from-[#1363CB] to-[#9C2FDF]", // Unified branding
+                preview: lastMessage ? lastMessage.content : "You are now connected!",
+                time: lastMessage ? formatTimeAgo(lastMessage.createdAt) : formatTimeAgo(c.createdAt),
+                unread: unreadCount,
+                isOnline,
+                // --- PASS FULL PROFILE DATA TO FRONTEND ---
+                lookingForTopic: unifiedTopics,
+                learningStyle: friendProfile.learningStyle,
+                personality: typeof friendProfile.personality === 'string' ? JSON.parse(friendProfile.personality) : friendProfile.personality,
+                availability: (friendProfile.availability as any)?.times?.join(", ") || "Flexible",
+                subjects: friendProfile.subjects
             };
         }));
+
+        // Sort so unread messages and newest messages show up first
+        friendsData.sort((a, b) => b.unread - a.unread);
+
+        res.json(friendsData);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to fetch messages" });
+        res.status(500).json({ error: "Failed to fetch friends list" });
+    }
+};
+
+export const getFriendsList = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = getStringParam(req.params.userId);
+        if (!userId) { res.status(400).json({ error: "User ID is missing" }); return; }
+
+        const connections = await RequestModel.findUserConnections(userId);
+        
+        const friends = connections.map(c => {
+            const isUser1 = c.user1Id === userId;
+            const friendProfile = isUser1 ? c.user2 : c.user1;
+            const friendUser = friendProfile.user;
+
+            return {
+                id: friendUser.id, // Using the internal user ID for session invites
+                name: `${friendUser.firstName} ${friendUser.lastName || ''}`.trim(),
+                email: friendUser.email,
+                avatar: `${friendUser.firstName?.[0] || ''}${friendUser.lastName?.[0] || ''}`.toUpperCase(),
+            };
+        });
+
+        res.json(friends);
+    } catch (error) {
+        console.error("Failed to fetch friends list:", error);
+        res.status(500).json({ error: "Failed to fetch friends list" });
     }
 };
 
