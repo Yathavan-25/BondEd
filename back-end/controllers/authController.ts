@@ -118,6 +118,10 @@ export const sendMfaCode = async (req: Request, res: Response) => {
                       </body>
                       </html>`;
 
+        // Verify SMTP credentials before attempting to send
+        await transporter.verify();
+        console.log(`✅ [MFA SMTP] SMTP connection verified, sending to ${email}...`);
+
         await transporter.sendMail({
           from: `"BondEd Security" <${smtpUser}>`,
           to: email,
@@ -131,11 +135,19 @@ export const sendMfaCode = async (req: Request, res: Response) => {
           }
         });
         console.log(`✅ [MFA EMAIL] Verification code sent to ${email}`);
-      } catch (mailErr) {
-        console.error('❌ [MFA EMAIL ERROR] Failed to send MFA email via SMTP:', mailErr);
+      } catch (mailErr: any) {
+        const errMsg = mailErr?.message || String(mailErr);
+        console.error('❌ [MFA EMAIL ERROR] SMTP failure:', errMsg);
+        console.error('❌ [MFA EMAIL ERROR] Full error:', JSON.stringify(mailErr, Object.getOwnPropertyNames(mailErr)));
+        // Return 500 so the error surfaces — don't silently return 200 on email failure
+        return res.status(500).json({
+          message: 'Failed to send MFA email. Check SMTP credentials in Railway environment variables.',
+          detail: errMsg
+        });
       }
     } else {
-      console.log(`⚠️ [MFA NOTICE] SMTP_USER / SMTP_PASS not set in back-end/.env.`);
+      console.log(`⚠️ [MFA NOTICE] SMTP_USER / SMTP_PASS not set. Set these in Railway environment variables.`);
+      return res.status(500).json({ message: 'Email service not configured. SMTP_USER and SMTP_PASS are missing.' });
     }
 
     return res.status(200).json({
