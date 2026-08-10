@@ -251,7 +251,7 @@ export const sendVerificationEmail = async (req: Request, res: Response) => {
     try {
       link = await firebaseAdminAuth.generateEmailVerificationLink(email, actionCodeSettings);
     } catch (linkErr) {
-      console.warn('Could not generate Firebase verification link, falling back to target URL:', linkErr);
+      console.warn('Could not generate Firebase verification link, falling back to direct target URL:', linkErr);
     }
 
     const brevoApiKey = process.env.BREVO_API_KEY?.trim();
@@ -261,56 +261,56 @@ export const sendVerificationEmail = async (req: Request, res: Response) => {
       const fromName = 'BondEd Security';
 
       const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="color-scheme" content="light" />
-  <meta name="supported-color-schemes" content="light" />
-  <title>Verify Your BondEd Account</title>
-  <style>:root { color-scheme: light; }</style>
-</head>
-<body style="margin:0;padding:0;background-color:#f0f0f8;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f0f8;padding:40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(109,40,217,0.15);">
-          <tr>
-            <td style="background:linear-gradient(135deg,#6d28d9 0%,#7c3aed 50%,#4f46e5 100%);padding:36px 40px 28px;text-align:center;">
-              <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:12px;padding:10px 22px;margin-bottom:16px;">
-                <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:1px;">Bond<span style="color:#ddd6fe;">Ed</span></span>
-              </div>
-              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">Verify Your Email Address</h1>
-              <p style="margin:8px 0 0;color:#ddd6fe;font-size:14px;">Welcome to BondEd</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background:#ffffff;padding:36px 40px;text-align:center;">
-              <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
-                Welcome to <strong>BondEd</strong>! Please click the button below to verify your email address and activate your account.
-              </p>
-              <div style="margin:28px 0;">
-                <a href="${link}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#6d28d9,#4f46e5);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px;border-radius:12px;box-shadow:0 4px 14px rgba(109,40,217,0.4);">
-                  Verify Email Address
-                </a>
-              </div>
-              <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
-                If the button doesn't work, copy and paste this link into your browser:<br/>
-                <a href="${link}" style="color:#6d28d9;word-break:break-all;">${link}</a>
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;color:#9ca3af;font-size:12px;">© ${new Date().getFullYear()} BondEd Collaborative Learning Platform. All rights reserved.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+                  <html lang="en">
+                  <head>
+                    <meta charset="UTF-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                    <meta name="color-scheme" content="light" />
+                    <meta name="supported-color-schemes" content="light" />
+                    <title>Verify Your BondEd Account</title>
+                    <style>:root { color-scheme: light; }</style>
+                  </head>
+                  <body style="margin:0;padding:0;background-color:#f0f0f8;font-family:'Segoe UI',Arial,sans-serif;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f0f8;padding:40px 20px;">
+                      <tr>
+                        <td align="center">
+                          <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(109,40,217,0.15);">
+                            <tr>
+                              <td style="background:linear-gradient(135deg,#6d28d9 0%,#7c3aed 50%,#4f46e5 100%);padding:36px 40px 28px;text-align:center;">
+                                <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:12px;padding:10px 22px;margin-bottom:16px;">
+                                  <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:1px;">Bond<span style="color:#ddd6fe;">Ed</span></span>
+                                </div>
+                                <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">Verify Your Email Address</h1>
+                                <p style="margin:8px 0 0;color:#ddd6fe;font-size:14px;">Welcome to BondEd</p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="background:#ffffff;padding:36px 40px;text-align:center;">
+                                <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+                                  Welcome to <strong>BondEd</strong>! Please click the button below to verify your email address and activate your account.
+                                </p>
+                                <div style="margin:28px 0;">
+                                  <a href="${link}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#6d28d9,#4f46e5);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px;border-radius:12px;box-shadow:0 4px 14px rgba(109,40,217,0.4);">
+                                    Verify Email Address
+                                  </a>
+                                </div>
+                                <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
+                                  If the button doesn't work, copy and paste this link into your browser:<br/>
+                                  <a href="${link}" style="color:#6d28d9;word-break:break-all;">${link}</a>
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
+                                <p style="margin:0;color:#9ca3af;font-size:12px;">© ${new Date().getFullYear()} BondEd Collaborative Learning Platform. All rights reserved.</p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </body>
+                  </html>`;
 
       await brevo.transactionalEmails.sendTransacEmail({
         sender: { email: fromEmail, name: fromName },
