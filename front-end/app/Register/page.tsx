@@ -153,12 +153,17 @@ const Register = () => {
       if (response.ok) {
         if (REQUIRE_EMAIL_VERIFICATION) {
           try {
-            await sendEmailVerification(createdUser);
+            await fetch(`${process.env.NEXT_PUBLIC_URL}/api/auth/send-verification-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: formData.email })
+            });
           } catch (e) {
-            console.warn("Failed to send verification email:", e);
+            console.warn("Failed to send verification email via Brevo, attempting fallback:", e);
+            await sendEmailVerification(createdUser).catch(err => console.warn("Fallback email verification error:", err));
           }
           await signOut(auth);
-          toast.success("Account created! Please check your email to verify your account before logging in.");
+          toast.success("Account created! Please check your email inbox to verify your account before logging in.");
           router.push("/Login");
           return;
         }
