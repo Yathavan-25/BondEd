@@ -43,11 +43,12 @@ export const sendMfaCode = async (req: Request, res: Response) => {
           host: isGmail ? 'smtp.gmail.com' : smtpHost,
           port,
           secure, // false for 587 (STARTTLS)
+          family: 4, // Force IPv4 — Railway does not support outbound IPv6
           auth: { user: smtpUser, pass: smtpPass },
           connectionTimeout: 10000, // 10 seconds
           greetingTimeout: 5000,
           socketTimeout: 10000
-        });
+        } as any);
 
         const html = `<!DOCTYPE html>
                       <html lang="en">
