@@ -79,6 +79,26 @@ export default function OnboardingFlow() {
     }
   }, [transcript]);
 
+  // Check if profile is already completed — if so, redirect directly to Dashboard to prevent duplicate onboarding!
+  useEffect(() => {
+    if (!studentId) return;
+    const checkProfileCompleted = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
+        const res = await fetch(`${baseUrl}/api/profile/${studentId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.profile?.subjects && data.profile.subjects.length > 0) {
+            router.replace(`/Student/${studentId}/Dashboard`);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking existing onboarding status:", err);
+      }
+    };
+    checkProfileCompleted();
+  }, [studentId, router]);
+
   const getAuthToken = (): Promise<string | null> => {
     return new Promise((resolve) => {
       if (!auth) {

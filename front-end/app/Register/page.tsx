@@ -2,10 +2,10 @@
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { ChartNoAxesCombined, GraduationCap, Sparkles, Users, Eye, EyeOff, Check } from 'lucide-react'
+import { ChartNoAxesCombined, GraduationCap, Sparkles, Users, Eye, EyeOff, Check, MailCheck, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { auth, googleProvider } from '@/lib/firebase'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createUserWithEmailAndPassword, deleteUser, getAdditionalUserInfo, signOut, signInWithPopup, sendEmailVerification } from 'firebase/auth';
 import toast from 'react-hot-toast';
@@ -37,7 +37,40 @@ const Register = () => {
   const [formData, setFormData] = useState({ email: '', password: '', CnfrmPassword: '', firstName: '', lastName: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Verification Pending States
+  const [isPendingVerification, setIsPendingVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [registeredUserId, setRegisteredUserId] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
   const router = useRouter();
+
+  // Cooldown countdown timer for resend email
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  // Polling to auto-detect when user verifies email in another tab or phone
+  useEffect(() => {
+    if (!isPendingVerification || !registeredUserId) return;
+
+    const checkVerificationStatus = async () => {
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+          toast.success("Email verified! Starting onboarding...");
+          router.push(`/OnBoardingFlow/${registeredUserId}`);
+        }
+      }
+    };
+
+    const interval = setInterval(checkVerificationStatus, 3000);
+    return () => clearInterval(interval);
+  }, [isPendingVerification, registeredUserId, router]);
 
   const passwordChecks = [
     { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -109,6 +142,43 @@ const Register = () => {
     }
   }
 
+  const handleResendEmail = async () => {
+    if (resendCooldown > 0 || isResending) return;
+    setIsResending(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/auth/send-verification-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registeredEmail, userId: registeredUserId })
+      });
+      if (res.ok) {
+        toast.success("Verification email resent! Check your inbox.");
+        setResendCooldown(30);
+      } else {
+        toast.error("Failed to resend email. Please try again.");
+      }
+    } catch (err) {
+      console.error("Resend error:", err);
+      toast.error("Failed to resend verification email.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleCheckVerification = async () => {
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      if (auth.currentUser.emailVerified) {
+        toast.success("Email verified! Starting onboarding...");
+        router.push(`/OnBoardingFlow/${registeredUserId}`);
+      } else {
+        toast.error("Email not verified yet. Please check your inbox and click the verification link.");
+      }
+    } else {
+      toast.error("User session expired. Please log in or check your email verification link.");
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -162,8 +232,11 @@ const Register = () => {
             console.warn("Failed to send verification email via Brevo, attempting fallback:", e);
             await sendEmailVerification(createdUser).catch(err => console.warn("Fallback email verification error:", err));
           }
-          toast.success("Account created! Check your email to verify.");
-          router.push(`/OnBoardingFlow/${data.user.id}`);
+          setRegisteredEmail(formData.email);
+          setRegisteredUserId(data.user.id);
+          setIsPendingVerification(true);
+          setResendCooldown(30);
+          toast.success("Account created! Please check your email to verify.");
           return;
         }
 
@@ -241,109 +314,164 @@ const Register = () => {
 
             <div className="w-full lg:mr-10.25 lg:my-8.75 m-6 p-8 sm:p-10 bg-white/35 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.15)] flex flex-col text-white">
 
-              <div className="flex flex-col mb-8 text-center">
-                <h2 className="text-3xl font-bold tracking-tight mb-2">
-                  Create an account
-                </h2>
-                <p className="text-sm font-geist">
-                  Enter your details to get started.
-                </p>
-              </div>
+              {isPendingVerification ? (
+                <div className="flex flex-col items-center text-center font-geist">
+                  <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg mb-6 text-white animate-pulse">
+                    <MailCheck className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-3xl font-bold tracking-tight mb-2">
+                    Verify Your Email
+                  </h2>
+                  <p className="text-sm text-white/80 font-geist max-w-sm mb-6 leading-relaxed">
+                    We&apos;ve sent a verification link to <strong className="text-white underline">{registeredEmail}</strong>.
+                    Please check your inbox and click the link to activate your account and start onboarding.
+                  </p>
 
-              <div className="flex flex-col gap-6 font-geist">
+                  {/* Status Indicator */}
+                  <div className="w-full bg-white/10 border border-white/20 rounded-xl p-4 mb-6 flex items-center justify-center gap-3">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    <span className="text-xs font-semibold tracking-wide text-white/90">
+                      Waiting for email verification...
+                    </span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  className="w-full flex items-center justify-center gap-3 rounded-xl border border-line-linear bg-white/5 px-4 py-3.5 text-sm font-regular transition-all hover:bg-white/10 hover:border-white/30 shadow-sm active:scale-[0.98] text-black"
-                >
-                  <Image src="/icons/google.svg" width={24} height={24} alt='Google Icon' />
-                  Sign up with Google
-                </button>
+                  <div className="w-full flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={handleCheckVerification}
+                      className="w-full py-3 px-4 rounded-xl bg-white text-gray-900 font-bold hover:bg-white/90 transition-all shadow-md active:scale-[0.98]"
+                    >
+                      I&apos;ve Verified My Email
+                    </button>
 
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-1 bg-white/20"></div>
-                  <span className="text-xs font-medium uppercase text-white/50 tracking-wider">Or continue with</span>
-                  <div className="h-px flex-1 bg-white/20"></div>
+                    <button
+                      type="button"
+                      onClick={handleResendEmail}
+                      disabled={resendCooldown > 0 || isResending}
+                      className="w-full py-3 px-4 rounded-xl border border-white/30 bg-white/10 font-semibold text-white hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isResending ? "Sending..." : resendCooldown > 0 ? `Resend email in ${resendCooldown}s` : "Resend Verification Email"}
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPendingVerification(false)}
+                    className="mt-8 text-xs text-white/70 hover:text-white underline transition-colors"
+                  >
+                    Entered wrong email? Back to registration
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <div className="flex flex-col mb-8 text-center">
+                    <h2 className="text-3xl font-bold tracking-tight mb-2">
+                      Create an account
+                    </h2>
+                    <p className="text-sm font-geist">
+                      Enter your details to get started.
+                    </p>
+                  </div>
 
-                <form className="grid grid-cols-2 gap-4">
-                  {formContent.map((item, key) => {
-                    const isHalfWidth = item.id === "firstName" || item.id === "lastName";
-                    const isPasswordField = item.id === "password" || item.id === "CnfrmPassword";
-                    const isShowingPassword = item.id === "password" ? showPassword : showConfirmPassword;
+                  <div className="flex flex-col gap-6 font-geist">
 
-                    return (
-                      <div
-                        key={key}
-                        className={`flex flex-col gap-1.5 ${isHalfWidth ? "col-span-1" : "col-span-2"}`}
-                      >
-                        <label htmlFor={item.id} className="text-sm font-medium text-white/90">
-                          {item.text}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={getInputType(item)}
-                            id={item.id}
-                            placeholder={item.placeholder}
-                            onChange={(e) => {
-                              setFormData((prevData) => ({
-                                ...prevData,
-                                [item.id]: e.target.value
-                              }));
-                            }}
-                            className={`h-11 w-full rounded-xl border border-white/20 bg-white/10 px-4 text-sm text-white outline-none transition-all placeholder:text-white/60 focus:placeholder:text-white focus:border-white/50 focus:bg-white/20 focus:ring-4 focus:ring-white/10 ${isPasswordField ? 'pr-11' : ''}`}
-                          />
-                          {isPasswordField && (
-                            <button
-                              type="button"
-                              onClick={() => item.id === "password" ? setShowPassword(p => !p) : setShowConfirmPassword(p => !p)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
-                            >
-                              {isShowingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          )}
-                        </div>
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      className="w-full flex items-center justify-center gap-3 rounded-xl border border-line-linear bg-white/5 px-4 py-3.5 text-sm font-regular transition-all hover:bg-white/10 hover:border-white/30 shadow-sm active:scale-[0.98] text-black"
+                    >
+                      <Image src="/icons/google.svg" width={24} height={24} alt='Google Icon' />
+                      Sign up with Google
+                    </button>
 
-                        {/* Password checklist — shown only under the password field */}
-                        {item.id === "password" && formData.password.length > 0 && (
-                          <div className="mt-1 flex flex-col gap-1">
-                            {passwordChecks.map((check, i) => {
-                              const passed = check.test(formData.password);
-                              return (
-                                <div key={i} className={`flex items-center gap-1.5 text-xs transition-colors ${passed ? 'text-green-300' : 'text-white/50'}`}>
-                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all ${passed ? 'bg-green-400/30 border-green-400' : 'border-white/30'}`}>
-                                    {passed && <Check className="w-2.5 h-2.5" />}
-                                  </div>
-                                  {check.label}
-                                </div>
-                              );
-                            })}
+                    <div className="flex items-center gap-4">
+                      <div className="h-px flex-1 bg-white/20"></div>
+                      <span className="text-xs font-medium uppercase text-white/50 tracking-wider">Or continue with</span>
+                      <div className="h-px flex-1 bg-white/20"></div>
+                    </div>
+
+                    <form className="grid grid-cols-2 gap-4">
+                      {formContent.map((item, key) => {
+                        const isHalfWidth = item.id === "firstName" || item.id === "lastName";
+                        const isPasswordField = item.id === "password" || item.id === "CnfrmPassword";
+                        const isShowingPassword = item.id === "password" ? showPassword : showConfirmPassword;
+
+                        return (
+                          <div
+                            key={key}
+                            className={`flex flex-col gap-1.5 ${isHalfWidth ? "col-span-1" : "col-span-2"}`}
+                          >
+                            <label htmlFor={item.id} className="text-sm font-medium text-white/90">
+                              {item.text}
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={getInputType(item)}
+                                id={item.id}
+                                placeholder={item.placeholder}
+                                onChange={(e) => {
+                                  setFormData((prevData) => ({
+                                    ...prevData,
+                                    [item.id]: e.target.value
+                                  }));
+                                }}
+                                className={`h-11 w-full rounded-xl border border-white/20 bg-white/10 px-4 text-sm text-white outline-none transition-all placeholder:text-white/60 focus:placeholder:text-white focus:border-white/50 focus:bg-white/20 focus:ring-4 focus:ring-white/10 ${isPasswordField ? 'pr-11' : ''}`}
+                              />
+                              {isPasswordField && (
+                                <button
+                                  type="button"
+                                  onClick={() => item.id === "password" ? setShowPassword(p => !p) : setShowConfirmPassword(p => !p)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                                >
+                                  {isShowingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Password checklist — shown only under the password field */}
+                            {item.id === "password" && formData.password.length > 0 && (
+                              <div className="mt-1 flex flex-col gap-1">
+                                {passwordChecks.map((check, i) => {
+                                  const passed = check.test(formData.password);
+                                  return (
+                                    <div key={i} className={`flex items-center gap-1.5 text-xs transition-colors ${passed ? 'text-green-300' : 'text-white/50'}`}>
+                                      <div className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all ${passed ? 'bg-green-400/30 border-green-400' : 'border-white/30'}`}>
+                                        {passed && <Check className="w-2.5 h-2.5" />}
+                                      </div>
+                                      {check.label}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Confirm password mismatch hint */}
+                            {item.id === "CnfrmPassword" && formData.CnfrmPassword.length > 0 && (
+                              <p className={`text-xs mt-0.5 transition-colors ${formData.password === formData.CnfrmPassword ? 'text-green-300' : 'text-red-300'}`}>
+                                {formData.password === formData.CnfrmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                              </p>
+                            )}
                           </div>
-                        )}
+                        );
+                      })}
+                    </form>
 
-                        {/* Confirm password mismatch hint */}
-                        {item.id === "CnfrmPassword" && formData.CnfrmPassword.length > 0 && (
-                          <p className={`text-xs mt-0.5 transition-colors ${formData.password === formData.CnfrmPassword ? 'text-green-300' : 'text-red-300'}`}>
-                            {formData.password === formData.CnfrmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </form>
+                    <button type='button' onClick={handleRegister} className="group border-2 bg-primary-linear px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all">
+                      <span className="group-hover:text-primary-linear group-hover:font-bold">Create Account</span>
+                    </button>
+                  </div>
 
-                <button type='button' onClick={handleRegister} className="group border-2 bg-primary-linear px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all">
-                  <span className="group-hover:text-primary-linear group-hover:font-bold">Create Account</span>
-                </button>
-              </div>
-
-              <p className="mt-8 text-center text-sm text-white/70 font-geist">
-                Already have an account?{" "}
-                <Link href="/Login" className="font-semibold text-primary hover:text-white/80 transition-colors">
-                  Log in
-                </Link>
-              </p>
+                  <p className="mt-8 text-center text-sm text-white/70 font-geist">
+                    Already have an account?{" "}
+                    <Link href="/Login" className="font-semibold text-primary hover:text-white/80 transition-colors">
+                      Log in
+                    </Link>
+                  </p>
+                </>
+              )}
 
             </div>
           </div>
