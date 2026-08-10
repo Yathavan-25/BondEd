@@ -13,6 +13,8 @@ import requestRoute from './routes/requestRoute.js';
 import messageRoute from './routes/messageRoute.js';
 import summaryRoutes from './routes/summaryRoute.js';
 import paymentRoutes from './routes/paymentRoute.js';
+import searchRoute from './routes/searchRoute.js';
+import feedbackRoute from './routes/feedbackRoute.js';
 
 // Import Webhook Controller
 import { stripeWebhook } from './controllers/paymentController.js';
@@ -20,8 +22,8 @@ import { stripeWebhook } from './controllers/paymentController.js';
 const app = express();
 
 // 1. Global Security & CORS Middlewares
-app.use(helmet());
-app.use(cors({ origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }));
+app.use(cors({ origin: true, credentials: true }));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 // 2. STRIPE WEBHOOK (CRITICAL: Must be registered BEFORE express.json())
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
@@ -40,6 +42,8 @@ app.use('/api/requests', requestRoute);
 app.use('/api/messages', messageRoute);
 app.use('/api/summary', summaryRoutes);
 app.use('/api/payments', paymentRoutes); // Other payment routes
+app.use('/api/search', searchRoute);
+app.use('/api/feedback', feedbackRoute);
 
 // 5. Health check endpoint
 app.get('/health', (_req, res) => {

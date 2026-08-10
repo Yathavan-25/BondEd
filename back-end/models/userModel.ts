@@ -43,6 +43,9 @@ export const upsertUserProfile = async (
     subjects: string[];
     availability: any;
     academicGoals: string;
+    preferredVoice?: string;
+    avatarUrl?: string;
+    mfaEnabled?: boolean;
   }
 ) => {
   return await prisma.profile.upsert({
@@ -57,6 +60,11 @@ export const upsertUserProfile = async (
 
 export const getProfileByUserId = async (userId: string) => {
   return await prisma.profile.findUnique({
-    where: { userId }
+    where: { userId },
+    include: { user: true }
   });
+};
+
+export const getTotalUserCount = async () => {
+  return await prisma.user.count();
 };

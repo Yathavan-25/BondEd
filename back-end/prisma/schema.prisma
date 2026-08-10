@@ -39,6 +39,9 @@ model Profile {
   subjects         String[]
   availability     Json
   academicGoals    String
+  preferredVoice   String?  @default("aura-asteria-en")
+  avatarUrl        String?
+  mfaEnabled       Boolean  @default(false)
   lastSeen         DateTime @default(now())
   updatedAt        DateTime @updatedAt
   sentRequests     Request[] @relation("SentRequests")

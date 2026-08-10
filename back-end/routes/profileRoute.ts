@@ -4,7 +4,8 @@ import { submitQuestionnaire, getProfile } from '../controllers/profileControlle
 
 const router = Router();
 
-// Existing POST route
+// POST routes (support both / and /questionnaire)
+router.post('/', protectRoute, submitQuestionnaire);
 router.post('/questionnaire', protectRoute, submitQuestionnaire);
 
 // NEW: GET route

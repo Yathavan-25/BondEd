@@ -6,7 +6,7 @@ import * as userModel from '../models/userModel.js';
 export const submitQuestionnaire = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { uid } = req.user!;
-    const { personality, learningStyle, knowledgeLevel, subjects, topics, availability, academicGoals } = req.body;
+    const { personality, learningStyle, knowledgeLevel, subjects, topics, availability, academicGoals, preferredVoice, avatarUrl, mfaEnabled } = req.body;
 
     const user = await userModel.getUserByFirebaseUid(uid);
     if (!user) {
@@ -20,7 +20,10 @@ export const submitQuestionnaire = async (req: AuthenticatedRequest, res: Respon
       topics,
       subjects,
       availability,
-      academicGoals
+      academicGoals,
+      preferredVoice,
+      avatarUrl,
+      mfaEnabled
     });
 
     return res.status(200).json({ message: 'Profile completed successfully', profile });
@@ -45,17 +48,17 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
 
     // Now pass the safe string
     if (safeStudentId) {
-        const profile = await userModel.getProfileByUserId(safeStudentId);
+      const profile = await userModel.getProfileByUserId(safeStudentId);
 
-        if (!profile) {
-          res.status(404).json({ error: "Profile not found" });
-          return;
-        }
-    
-        // Return the profile nested in a 'profile' object so the frontend can read data.profile.topics
-        res.status(200).json({ profile });
+      if (!profile) {
+        res.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
+      // Return the profile nested in a 'profile' object so the frontend can read data.profile.topics
+      res.status(200).json({ profile });
     }
-   
+
   } catch (error) {
     console.error("Error fetching profile:", error);
     res.status(500).json({ error: "Internal server error" });

@@ -4,6 +4,8 @@ import {
     getStudentSessions, 
     endVoiceSession,
     joinRoom,
+    leaveCollabSession,
+    endSession,
     getCollabRecording
 } from '../controllers/sessionController.js';
 import { protectRoute } from '../middleware/authMiddleware.js';
@@ -15,5 +17,7 @@ router.get('/student/:studentId', protectRoute, getStudentSessions);
 router.post('/voice/end', protectRoute, endVoiceSession);
 router.get('/:sessionId/recording', protectRoute, getCollabRecording);
 router.post('/:sessionId/join', protectRoute, joinRoom);
+router.post('/:sessionId/leave', protectRoute, leaveCollabSession);
+router.post('/:sessionId/end', protectRoute, endSession);
 
 export default router;
