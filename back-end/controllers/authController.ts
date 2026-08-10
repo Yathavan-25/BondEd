@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import * as userModel from '../models/userModel.js';
 
-import { Resend } from 'resend';
+import * as SibApiV3Sdk from '@getbrevo/brevo';
 
 // In-memory OTP store for MFA codes: email -> { code, expiresAt }
 const mfaStore = new Map<string, { code: string; expiresAt: number }>();
@@ -27,13 +27,16 @@ export const sendMfaCode = async (req: Request, res: Response) => {
 
     mfaStore.set(email.toLowerCase(), { code, expiresAt });
 
-    // Dispatch 6-digit code via email using Resend (HTTP API — works on Railway free tier)
-    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    // Dispatch 6-digit code via email using Brevo (HTTP API — no SMTP ports, no recipient restrictions)
+    const brevoApiKey = process.env.BREVO_API_KEY?.trim();
 
-    if (resendApiKey) {
+    if (brevoApiKey) {
       try {
-        const resend = new Resend(resendApiKey);
-        const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+        const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+        const apiKey = apiInstance.authentications['apiKey'] as SibApiV3Sdk.ApiKeyAuth;
+        apiKey.apiKey = brevoApiKey;
+        const fromEmail = process.env.BREVO_FROM_EMAIL || 'dev.bonded@gmail.com';
+        const fromName = 'BondEd Security';
 
         const html = `<!DOCTYPE html>
                       <html lang="en">
@@ -104,34 +107,26 @@ export const sendMfaCode = async (req: Request, res: Response) => {
                       </body>
                       </html>`;
 
-        const { error: sendError } = await resend.emails.send({
-          from: `BondEd Security <${fromAddress}>`,
-          to: email,
-          subject: `🔒 Your BondEd 2FA Security Code`,
-          text: `BondEd Two-Factor Authentication\n\nYour 6-digit verification code is: ${code}\n\nThis code expires in 10 minutes.\nIf you did not request this, please secure your account immediately.`,
-          html,
-        });
+        const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+        sendSmtpEmail.sender = { email: fromEmail, name: fromName };
+        sendSmtpEmail.to = [{ email }];
+        sendSmtpEmail.subject = '🔒 Your BondEd 2FA Security Code';
+        sendSmtpEmail.textContent = `BondEd Two-Factor Authentication\n\nYour 6-digit verification code is: ${code}\n\nThis code expires in 10 minutes.\nIf you did not request this, please secure your account immediately.`;
+        sendSmtpEmail.htmlContent = html;
 
-        if (sendError) {
-          console.error('❌ [MFA EMAIL ERROR] Resend API error:', JSON.stringify(sendError));
-          return res.status(500).json({
-            message: 'Failed to send MFA email via Resend.',
-            detail: sendError.message
-          });
-        }
-
-        console.log(`✅ [MFA EMAIL] Verification code sent to ${email} via Resend`);
+        await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log(`✅ [MFA EMAIL] Verification code sent to ${email} via Brevo`);
       } catch (mailErr: any) {
         const errMsg = mailErr?.message || String(mailErr);
-        console.error('❌ [MFA EMAIL ERROR] Resend exception:', errMsg);
+        console.error('❌ [MFA EMAIL ERROR] Brevo exception:', errMsg);
         return res.status(500).json({
-          message: 'Failed to send MFA email. Check RESEND_API_KEY in Railway environment variables.',
+          message: 'Failed to send MFA email. Check BREVO_API_KEY in Railway environment variables.',
           detail: errMsg
         });
       }
     } else {
-      console.log(`⚠️ [MFA NOTICE] RESEND_API_KEY not set in Railway environment variables.`);
-      return res.status(500).json({ message: 'Email service not configured. Add RESEND_API_KEY to Railway environment variables.' });
+      console.log(`⚠️ [MFA NOTICE] BREVO_API_KEY not set in Railway environment variables.`);
+      return res.status(500).json({ message: 'Email service not configured. Add BREVO_API_KEY to Railway environment variables.' });
     }
 
     return res.status(200).json({
