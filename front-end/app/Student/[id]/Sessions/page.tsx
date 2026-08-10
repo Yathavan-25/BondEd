@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import toast from "react-hot-toast";
 
 type SessionStatus = "upcoming" | "live" | "past";
 
@@ -258,10 +259,10 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
           if (res.ok && data.url) {
               window.open(data.url, '_blank');
           } else {
-              alert(data.error || "Recording not found.");
+              toast.error(data.error || "Recording not found.");
           }
       } catch (err) {
-          alert("Network error fetching recording.");
+          toast.error("Network error fetching recording.");
       } finally {
           setLoadingRec(false);
       }

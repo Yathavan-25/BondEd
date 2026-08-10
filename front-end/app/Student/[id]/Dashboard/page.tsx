@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { onAuthStateChanged, } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import {
@@ -93,6 +93,7 @@ function GoalItem({ title, progress, color, delay = 0 }: any) {
 
 export default function DashboardPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const studentId = params?.id;
 
   const [data, setData] = useState<any>(null);
@@ -105,7 +106,8 @@ export default function DashboardPage() {
         onAuthStateChanged(auth, async (user) => {
           if (user) {
             const token = await user.getIdToken();
-            const res = await fetch(`http://localhost:5000/api/dashboard/${studentId}`, {
+            const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
+            const res = await fetch(`${baseUrl}/api/dashboard/${studentId}`, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -128,6 +130,16 @@ export default function DashboardPage() {
   const hours = useCountUp(data?.stats?.hours || 0, 1000, started);
   const partners = useCountUp(data?.stats?.partners || 0, 1000, started);
   const score = useCountUp(data?.stats?.score || 0, 1000, started);
+
+  const formatStudyTime = (val: number) => {
+    if (!val || val <= 0) return "0 mins";
+    const totalMins = Math.round(val * 60);
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    if (hrs > 0 && mins > 0) return `${hrs} ${hrs === 1 ? 'hour' : 'hours'} and ${mins} ${mins === 1 ? 'min' : 'mins'}`;
+    if (hrs > 0) return `${hrs} ${hrs === 1 ? 'hour' : 'hours'}`;
+    return `${mins} ${mins === 1 ? 'min' : 'mins'}`;
+  };
 
   const averageGoalProgress = data?.goals?.length > 0 
     ? Math.round(data.goals.reduce((acc: any, goal: any) => acc + goal.progress, 0) / data.goals.length)
@@ -157,7 +169,10 @@ export default function DashboardPage() {
             {data.user.sessionsThisWeek} sessions this week · {data.user.pendingRequests} pending requests
           </p>
         </div>
-        <button className="w-full sm:w-auto bg-[#1363CB] hover:bg-blue-700 active:scale-95 text-white px-5 py-2.5 rounded-[14px] font-medium text-sm transition-all shadow-sm flex items-center justify-center gap-2 shrink-0">
+        <button 
+          onClick={() => router.push(`/Student/${studentId}/FindPartners`)}
+          className="w-full sm:w-auto bg-[#1363CB] hover:bg-blue-700 active:scale-95 text-white px-5 py-2.5 rounded-[14px] font-medium text-sm transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+        >
           <UserPlus className="w-4 h-4" />
           Find a partner
         </button>
@@ -165,8 +180,8 @@ export default function DashboardPage() {
 
       {/* ── stats ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <StatCard title="Study streak" value={`${Math.round(streak)} days`} sub={data.stats.streak > 0 ? "🔥 Keep it up!" : "Start a streak today"} subColor={data.stats.streak > 0 ? "text-[#1363CB]" : "text-gray-400"} accentColor="#1363CB" iconBg="bg-blue-50" iconColor="text-[#1363CB]" icon={Flame} sparkData={data.stats.streak > 0 ? [4,6,5,8,7,10,12] : []} sparkColor="#1363CB" />
-        <StatCard title="Hours this week" value={hours % 1 === 0 ? `${hours}` : hours.toFixed(1)} sub={data.stats.hours > 0 ? "Logged so far" : "Ready to study?"} subColor={data.stats.hours > 0 ? "text-[#159E22]" : "text-gray-400"} accentColor="#159E22" iconBg="bg-green-50" iconColor="text-[#159E22]" icon={Clock} sparkData={data.stats.hours > 0 ? [9,11,10,12,13,14,14.5] : []} sparkColor="#159E22" />
+        <StatCard title="Study streak" value={`${Math.round(streak)} ${Math.round(streak) === 1 ? "day" : "days"}`} sub={data?.stats?.streak > 0 ? "🔥 Keep it up!" : "Log in daily to build your streak!"} subColor={data?.stats?.streak > 0 ? "text-[#1363CB]" : "text-gray-400"} accentColor="#1363CB" iconBg="bg-blue-50" iconColor="text-[#1363CB]" icon={Flame} sparkData={data?.stats?.streak > 0 ? [1,2,2,3,3,streak,streak] : []} sparkColor="#1363CB" />
+        <StatCard title="Hours this week" value={formatStudyTime(hours)} sub={data.stats.hours > 0 ? "Logged so far" : "Ready to study?"} subColor={data.stats.hours > 0 ? "text-[#159E22]" : "text-gray-400"} accentColor="#159E22" iconBg="bg-green-50" iconColor="text-[#159E22]" icon={Clock} sparkData={data.stats.hours > 0 ? [9,11,10,12,13,14,14.5] : []} sparkColor="#159E22" />
         <StatCard title="Active partners" value={`${Math.round(partners)}`} sub="Past collaborations" subColor="text-[#1492ab]" accentColor="#1492ab" iconBg="bg-cyan-50" iconColor="text-[#1492ab]" icon={Users} sparkData={data.stats.partners > 0 ? [3,4,4,5,5,6,7] : []} sparkColor="#1492ab" />
         <StatCard title="Avg session score" value={`${Math.round(score)}%`} sub="Current Knowledge Level" subColor="text-[#5114ab]" accentColor="#5114ab" iconBg="bg-purple-50" iconColor="text-[#5114ab]" icon={Target} sparkData={data.stats.score > 0 ? [80,83,85,88,87,90,92] : []} sparkColor="#5114ab" />
       </div>
@@ -181,7 +196,10 @@ export default function DashboardPage() {
               <CalendarIcon className="text-[#1363CB] w-4 h-4" /> Upcoming sessions
             </h2>
             {data.sessions.length > 0 && (
-              <button className="text-xs font-medium text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors">
+              <button 
+                onClick={() => router.push(`/Student/${studentId}/Sessions`)}
+                className="text-xs font-medium text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors cursor-pointer"
+              >
                 View all <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -253,7 +271,10 @@ export default function DashboardPage() {
               <Users className="text-[#1363CB] w-4 h-4" /> Suggested partners
             </h2>
             {data.suggestedPartners.length > 0 && (
-              <button className="text-xs font-medium text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors">
+              <button 
+                onClick={() => router.push(`/Student/${studentId}/FindPartners`)}
+                className="text-xs font-medium text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors cursor-pointer"
+              >
                 Browse all <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}

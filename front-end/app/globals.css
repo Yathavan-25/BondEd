@@ -23,9 +23,9 @@
   --color-secondary-color: #4993F24D;
   --color-gray-background: #F1F5F9;  
 
-  --font-funnel: "Funnel Display", sans-serif;
-  --font-geist: "Geist", sans-serif;
-
+  --font-funnel: var(--font-funnel-display), "Funnel Display", sans-serif;
+  --font-geist: var(--font-geist-sans), "Geist", sans-serif;
+  --font-sans: var(--font-geist-sans), "Geist", sans-serif;
   --radius-sm: 10px;
   --radius-md: 25px;
   --radius-lg: 65px;
@@ -75,13 +75,18 @@ html {
   scroll-behavior: smooth;
 }
 
-body{
-  font-family: var(--font-funnel);
+body {
+  font-family: var(--font-geist);
   background-color: var(--color-gray-background);
 }
 
-button{
-  @apply rounded-sm cursor-pointer font-funnel text-[16px] transition-all duration-300       
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-funnel);
+}
+
+button {
+  font-family: var(--font-funnel);
+  @apply rounded-sm cursor-pointer text-[16px] transition-all duration-300;      
 }
 
 .card{
@@ -327,7 +332,10 @@ button{
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-geist;
+  }
+  h1, h2, h3, h4, h5, h6, button {
+    font-family: var(--font-funnel);
   }
   html {
     @apply font-sans;

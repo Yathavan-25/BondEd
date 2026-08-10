@@ -1,9 +1,10 @@
 'use client'
 
+import { useEffect, useState } from "react"
 import { motion, Variants } from "framer-motion"
 import { Headset, WandSparkles } from "lucide-react"
 import Link from "next/link"
-
+import CountUp from "react-countup"
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -26,6 +27,25 @@ const itemVariants: Variants = {
 }
 
 const CTA = () => {
+  const [studentCount, setStudentCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000'
+        const res = await fetch(`${baseUrl}/api/auth/count`)
+        if (res.ok) {
+          const data = await res.json()
+          setStudentCount(data.count)
+        }
+      } catch (error) {
+        console.error('Error fetching student count for CTA:', error)
+      }
+    }
+
+    fetchUserCount()
+  }, [])
+
   return (
     <motion.main 
       variants={containerVariants}
@@ -47,7 +67,7 @@ const CTA = () => {
           variants={itemVariants}
           className="text-center font-geist text-white/75 text-[16px] md:text-[20px] font-light mt-4"
         >
-          Join 12,000+ students already studying smarter with BondEd
+          Join {studentCount !== null ? <CountUp end={studentCount} duration={2.5} separator="," /> : 0}+ students already studying smarter with BondEd
         </motion.p>
         
         {/* CTA Buttons */}

@@ -51,7 +51,7 @@ export default function Pricing() {
 
     // If they click 'Buy' on the home page but aren't logged in, redirect them!
     if (!user) {
-        alert("Please sign in or create an account to purchase credits.");
+        toast.error("Please sign in or create an account to purchase credits.");
         router.push('/login'); 
         return;
     }
@@ -88,7 +88,7 @@ export default function Pricing() {
   };
 
   return (
-    <section className="py-24 font-funnel overflow-hidden" id="pricing">
+    <section className="py-24 overflow-hidden" id="pricing">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
         <div className="text-center mb-16 px-6">

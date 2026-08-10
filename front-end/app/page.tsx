@@ -1,4 +1,4 @@
-import { ArrowRight, Crosshair, Sparkles, Users } from 'lucide-react'
+import { ArrowRight, Crosshair, Sparkles } from 'lucide-react'
 import Navbar from './components/Navbar'
 import SplineScene from './components/SplineScene'
 import HowItWorks from './components/HowItWorks'
@@ -9,6 +9,7 @@ import Pricing from './components/Pricing'
 import CTA from './components/CTA'
 import Footer from './components/Footer'
 import Link from 'next/link'
+import StudentCounter from './components/StudentCounter'
 
 const Home = () => {
 
@@ -78,10 +79,7 @@ const Home = () => {
                 <Crosshair strokeWidth={1.5} className="w-5 h-5 text-[#6366F1]" />
                 95% Accurate Matching
               </span>
-              <span className="flex items-center gap-2">
-                <Users strokeWidth={1.5} className="w-5 h-5 text-[#A855F7]" />
-                10,000+ Students
-              </span>
+              <StudentCounter />
             </div>
 
           </div>

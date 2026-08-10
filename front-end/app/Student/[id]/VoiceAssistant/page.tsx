@@ -8,8 +8,9 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Vapi from "@vapi-ai/web";
-import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen,AlertTriangle } from "lucide-react";
+import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen, AlertTriangle } from "lucide-react";
 import { auth } from "@/lib/firebase";
+import toast from "react-hot-toast";
 
 const VAPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "";
 const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_PERSONALIZED_ASSISTANT_ID || "";
@@ -25,15 +26,15 @@ export default function VoiceAssistantPage() {
   const [assistantState, setAssistantState] = useState<AssistantState>("idle");
   const [seconds, setSeconds] = useState(0);
   const [waveform, setWaveform] = useState<number[]>(() => Array.from({ length: 28 }, () => 0.2));
-  
+
   const [profile, setProfile] = useState<any>(null);
   const [memory, setMemory] = useState<string>("");
   const [transcripts, setTranscripts] = useState<TranscriptMessage[]>([]);
-  const [liveMessage, setLiveMessage] = useState<{role: string, text: string} | null>(null);
-  
+  const [liveMessage, setLiveMessage] = useState<{ role: string, text: string } | null>(null);
+
   const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [customTopic, setCustomTopic] = useState<string>("");
-  
+
   // Real-time credits & warnings
   const [availableMinutes, setAvailableMinutes] = useState<number>(0);
   const [timeWarning, setTimeWarning] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export default function VoiceAssistantPage() {
   useEffect(() => {
     finalTopicRef.current = customTopic.trim() || selectedTopic;
   }, [customTopic, selectedTopic]);
-  
+
   useEffect(() => {
     currentCallIdRef.current = currentCallId;
   }, [currentCallId]);
@@ -68,36 +69,36 @@ export default function VoiceAssistantPage() {
     const fetchContext = async () => {
       if (!studentId) return;
       try {
-        onAuthStateChanged(auth, async(user) =>{
+        onAuthStateChanged(auth, async (user) => {
           const token = await user?.getIdToken();
           const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
-          
+
           // Fetch Profile
-          const res = await fetch(`${baseUrl}/api/profile/${studentId}`, { 
+          const res = await fetch(`${baseUrl}/api/profile/${studentId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (res.ok) {
             const data = await res.json();
             setProfile(data.profile || data);
             if (data.profile?.topics?.length > 0) {
-                setSelectedTopic(data.profile.topics[0]);
+              setSelectedTopic(data.profile.topics[0]);
             }
           }
 
           // Fetch Last Session Memory
           const memRes = await fetch(`${baseUrl}/api/summary/last/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
           if (memRes.ok) {
-              const memData = await memRes.json();
-              if (memData.lastSession) {
-                  setMemory(`Last session summary: ${memData.lastSession.summary}. Next steps requested: ${memData.lastSession.profileUpdates?.nextSteps}`);
-              }
+            const memData = await memRes.json();
+            if (memData.lastSession) {
+              setMemory(`Last session summary: ${memData.lastSession.summary}. Next steps requested: ${memData.lastSession.profileUpdates?.nextSteps}`);
+            }
           }
 
           // Fetch Actual Credits Remaining
           const credRes = await fetch(`${baseUrl}/api/payments/credits/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
           if (credRes.ok) {
-              const credData = await credRes.json();
-              setAvailableMinutes(credData.vapiMinutesRemaining || 0);
+            const credData = await credRes.json();
+            setAvailableMinutes(credData.vapiMinutesRemaining || 0);
           }
         })
       } catch (err) { console.error("Failed to load context", err); }
@@ -108,42 +109,42 @@ export default function VoiceAssistantPage() {
   const finalizeSession = async (structuredData: any, summary?: string) => {
     if (hasFinalizedRef.current) return;
     hasFinalizedRef.current = true;
-  
+
     if (fallbackTimerRef.current) {
       clearTimeout(fallbackTimerRef.current);
       fallbackTimerRef.current = null;
     }
-  
+
     setAssistantState("analyzing");
     try { vapiRef.current?.stop(); } catch { /* already stopped, ignore */ }
-  
+
     const finalTopic = finalTopicRef.current || "General Study";
     const callId = currentCallIdRef.current;
     const startTime = sessionStartRef.current?.toISOString() || new Date().toISOString();
     const endTime = new Date().toISOString();
-  
+
     try {
       const token = await getAuth().currentUser?.getIdToken();
       const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
-  
+
       fetch(`${baseUrl}/api/sessions/voice/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ 
-            studentId, 
-            callId, 
-            selectedTopic: finalTopic,
-            transcripts: transcriptsRef.current,
-            structuredData,
-            summary,
-            startTime,
-            endTime
+        body: JSON.stringify({
+          studentId,
+          callId,
+          selectedTopic: finalTopic,
+          transcripts: transcriptsRef.current,
+          structuredData,
+          summary,
+          startTime,
+          endTime
         })
       }).catch((err) => console.error("Background session save failed:", err));
     } catch (err) {
       console.error("Failed to get auth token for session save:", err);
     }
-  
+
     sessionStorage.setItem("pendingSessionSince", Date.now().toString());
     router.push(`/Student/${studentId}/Summary?pending=1`);
   };
@@ -192,8 +193,8 @@ export default function VoiceAssistantPage() {
       if (!hasFinalizedRef.current) finalizeSession({}, undefined);
     });
     vapi.on("error", (e: any) => {
-        console.error("VAPI ERROR:", e);
-        if (!hasFinalizedRef.current) setAssistantState("idle");
+      console.error("VAPI ERROR:", e);
+      if (!hasFinalizedRef.current) setAssistantState("idle");
     });
 
     return () => {
@@ -215,7 +216,7 @@ export default function VoiceAssistantPage() {
   useEffect(() => {
     if (assistantState !== "listening") return;
     const leftSec = availableMinutes * 60 - seconds;
-    
+
     if (leftSec <= 0) {
       setTimeWarning("Out of credits! Ending session.");
       // Hard stop immediately
@@ -229,11 +230,11 @@ export default function VoiceAssistantPage() {
 
   const toggleStart = async () => {
     const finalTopic = customTopic.trim() || selectedTopic;
-    if (!finalTopic) return alert("Please select or type a topic first!");
-    
+    if (!finalTopic) return toast.error("Please select or type a topic first!");
+
     // Prevent starting if no minutes left
     if (availableMinutes <= 0) {
-        return alert("You are out of AI Voice minutes! Please add more credits to your account to start a session.");
+      return toast.error("You are out of AI Voice minutes! Please add more credits to your account to start a session.");
     }
 
     if (assistantState === "idle" || assistantState === "stopped") {
@@ -245,19 +246,26 @@ export default function VoiceAssistantPage() {
       hasFinalizedRef.current = false;
 
       try {
+        const voiceId = profile?.preferredVoice || "aura-asteria-en";
         const call = await vapiRef.current.start(ASSISTANT_ID, {
-            variableValues: {
-              learningStyle: profile?.learningStyle?.join(", ") || "Adaptive",
-              currentTopic: finalTopic,
-              academicGoals: profile?.academicGoals || "Improve understanding.",
-              pastSessionMemory: memory || "No previous session."
+          variableValues: {
+            learningStyle: profile?.learningStyle?.join(", ") || "Adaptive",
+            currentTopic: finalTopic,
+            academicGoals: profile?.academicGoals || "Improve understanding.",
+            pastSessionMemory: memory || "No previous session."
+          },
+          assistantOverrides: {
+            voice: {
+              provider: "deepgram",
+              voiceId: voiceId
             }
+          }
         });
-        
+
         if (call && call.id) {
-            setCurrentCallId(call.id);
+          setCurrentCallId(call.id);
         } else {
-            setAssistantState("idle");
+          setAssistantState("idle");
         }
       } catch (err) {
         console.error("Vapi Start Error", err);
@@ -274,7 +282,7 @@ export default function VoiceAssistantPage() {
 
   const stopSession = () => {
     setAssistantState("analyzing");
-  
+
     try {
       vapiRef.current?.send({
         type: "add-message",
@@ -287,13 +295,13 @@ export default function VoiceAssistantPage() {
     } catch (err) {
       console.error("Failed to send end-session nudge:", err);
     }
-  
+
     fallbackTimerRef.current = setTimeout(() => {
       if (!hasFinalizedRef.current) {
         console.warn("submitSessionUpdate never fired — finalizing with fallback data.");
         finalizeSession({}, undefined);
       }
-    }, 20000); 
+    }, 20000);
   };
 
   const formattedTime = `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
@@ -303,14 +311,14 @@ export default function VoiceAssistantPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 pb-10 px-4 md:px-6 pt-6 relative">
-      
+
       {/* Time Warning Toast */}
       <AnimatePresence>
         {timeWarning && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0, y: -20 }} 
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
             className="fixed top-24 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 shadow-lg z-50"
           >
             <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -340,41 +348,41 @@ export default function VoiceAssistantPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 relative rounded-[28px] border border-gray-200/80 bg-white shadow-sm p-6 md:p-8 flex flex-col overflow-hidden">
           <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-[#9C2FDF]/10 blur-3xl" />
-          
+
           <div className="relative flex justify-between items-start mb-8">
             <div className="w-full max-w-sm">
-                {assistantState === "idle" && (
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 mb-2"><BookOpen className="w-3.5 h-3.5"/> Today&apos;s Topic</label>
-                        <div className="flex gap-2">
-                            <select 
-                                value={selectedTopic} 
-                                onChange={(e) => { setSelectedTopic(e.target.value); setCustomTopic(""); }}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1363CB]"
-                            >
-                                {profile?.topics?.map((t: string) => <option key={t} value={t}>{t}</option>)}
-                                <option value="custom">-- Type Custom Topic --</option>
-                            </select>
-                        </div>
-                        {selectedTopic === "custom" && (
-                            <input 
-                                type="text" 
-                                placeholder="E.g. Binary Trees" 
-                                value={customTopic}
-                                onChange={(e) => setCustomTopic(e.target.value)}
-                                className="w-full mt-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1363CB]"
-                            />
-                        )}
-                    </div>
-                )}
+              {assistantState === "idle" && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 mb-2"><BookOpen className="w-3.5 h-3.5" /> Today&apos;s Topic</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedTopic}
+                      onChange={(e) => { setSelectedTopic(e.target.value); setCustomTopic(""); }}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1363CB]"
+                    >
+                      {profile?.topics?.map((t: string) => <option key={t} value={t}>{t}</option>)}
+                      <option value="custom">-- Type Custom Topic --</option>
+                    </select>
+                  </div>
+                  {selectedTopic === "custom" && (
+                    <input
+                      type="text"
+                      placeholder="E.g. Binary Trees"
+                      value={customTopic}
+                      onChange={(e) => setCustomTopic(e.target.value)}
+                      className="w-full mt-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1363CB]"
+                    />
+                  )}
+                </div>
+              )}
             </div>
-            
+
             {assistantState !== "idle" && (
               <AnimatePresence mode="wait">
                 <motion.div key={assistantState} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-center gap-1.5 rounded-full bg-gray-50 border border-gray-200 px-3 py-1">
                   <Waves className="w-3.5 h-3.5 text-[#1363CB]" />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">
-                      {assistantState === "analyzing" ? "Wrapping Up" : assistantState}
+                    {assistantState === "analyzing" ? "Wrapping Up" : assistantState}
                   </span>
                 </motion.div>
               </AnimatePresence>

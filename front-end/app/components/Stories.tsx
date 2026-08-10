@@ -75,11 +75,9 @@ export default function Stories() {
       </div>
 
       {/* --- The Auto-Slider --- */}
-      {/* ADDED: "marquee-container" class to track mouse hovers anywhere in this row */}
       <div className="relative w-full flex items-center h-100 marquee-container">
         
-        {/* REMOVED: Tailwind hover logic. Relies strictly on the native CSS above. */}
-        <div className="flex gap-6 w-max px-3 animate-pure-marquee">
+        <div className="flex gap-6 w-max px-3 animate-pure-marquee will-change-transform transform-gpu">
           {SLIDER_ITEMS.map((testimonial, idx) => (
             <TestimonialCard key={idx} testimonial={testimonial} />
           ))}

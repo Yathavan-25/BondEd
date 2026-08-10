@@ -11,15 +11,30 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 const footerLinks = [
   {
     title: "Product",
-    links: ["Features", "Pricing", "Success Stories", "FAQs"],
+    links: [
+      { name: "Features", href: "/#features" },
+      { name: "Pricing", href: "/#pricing" },
+      { name: "Success Stories", href: "/#stories" },
+      { name: "How It Works", href: "/#how-it-works" },
+    ],
   },
   {
     title: "Company",
-    links: ["About Us", "Careers", "Blogs", "Contact"],
+    links: [
+      { name: "About Us", href: "/About" },
+      { name: "FAQs", href: "/Faqs" },
+      { name: "Blogs", href: "/Blogs" },
+      { name: "Contact", href: "/Contact" },
+    ],
   },
   {
     title: "Resources",
-    links: ["Help Center", "Guide", "Community", "Api Docs"],
+    links: [
+      { name: "Help Center", href: "/Help" },
+      { name: "Guide", href: "/Guide" },
+      { name: "Community", href: "/Community" },
+      { name: "Api Docs", href: "/ApiDocs" },
+    ],
   },
 ]
 
@@ -40,13 +55,13 @@ const containerVariants: Variants = {
 
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { 
-      duration: 0.5, 
-      ease: [0.25, 0.1, 0.25, 1] as const 
-    } 
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.25, 0.1, 0.25, 1] as const
+    }
   }
 }
 
@@ -55,9 +70,9 @@ export default function Footer() {
     <footer className="relative w-full bg-[#052247] text-white overflow-hidden pt-20 sm:pt-24 isolate">
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col">
-        
+
         {/* --- Top/Middle Section: Logo & Links --- */}
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -75,14 +90,14 @@ export default function Footer() {
             <p className="text-gray-400 text-sm leading-relaxed max-w-sm mb-8 font-geist">
               Empowering students to learn smarter, together. The AI-powered collaborative platform built for modern academic success.
             </p>
-            
+
             {/* Social Icons */}
             <div className="flex items-center gap-3">
               {socialLinks.map((social, index) => {
                 const Icon = social.icon
                 return (
-                  <Link 
-                    key={index} 
+                  <Link
+                    key={index}
                     href={social.href}
                     className="w-10 h-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-gray-400 transition-all duration-300 hover:bg-white/10 hover:text-white hover:-translate-y-1 transform-gpu"
                   >
@@ -100,11 +115,11 @@ export default function Footer() {
               <ul className="flex flex-col gap-4 ">
                 {section.links.map((link, i) => (
                   <li key={i}>
-                    <Link 
-                      href="#" 
+                    <Link
+                      href={link.href}
                       className="text-gray-400 text-sm transition-colors duration-300 hover:text-white flex items-center group relative w-fit font-geist"
                     >
-                      {link}
+                      {link.name}
                       <span className="absolute -bottom-1 left-0 w-0 h-px bg-white transition-all duration-300 group-hover:w-full" />
                     </Link>
                   </li>
@@ -115,7 +130,7 @@ export default function Footer() {
         </motion.div>
 
         {/* --- Bottom Section: Legal & Copyright --- */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -126,13 +141,13 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} BondEd. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <Link href="#" className="text-gray-500 text-sm hover:text-white transition-colors duration-300">Privacy Policy</Link>
-            <Link href="#" className="text-gray-500 text-sm hover:text-white transition-colors duration-300">Terms of Service</Link>
+            <Link href="/Privacy" className="text-gray-500 text-sm hover:text-white transition-colors duration-300">Privacy Policy</Link>
+            <Link href="/Terms" className="text-gray-500 text-sm hover:text-white transition-colors duration-300">Terms of Service</Link>
           </div>
         </motion.div>
       </div>
 
-      
+
 
     </footer>
   )

@@ -114,6 +114,9 @@ export default function SessionSummaryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPending, pendingResolved, studentId]);
 
+  const [dateFilter, setDateFilter] = useState<'all' | '7days' | '30days'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+
   const handleTabSwitch = (tab: 'voice' | 'collaborative') => {
     userInteractedRef.current = true;
     setActiveTab(tab)
@@ -136,8 +139,29 @@ export default function SessionSummaryPage() {
 
   if (!data) return <div className="p-8 text-center text-red-500 font-semibold">Failed to load data. Please try again.</div>
 
-  const currentSessions = data[activeTab] || []
-  const currentData = currentSessions[selectedSessionIndex]
+  const rawSessions = data[activeTab] || []
+
+  // Filter sessions by date range and search query
+  const filteredSessions = rawSessions.filter((session: any) => {
+    const title = session.lesson?.title || '';
+    const topics = (session.lesson?.topicsCovered || []).join(' ');
+    const matchesSearch = searchQuery === '' || 
+      title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      topics.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+    if (dateFilter === 'all') return true;
+
+    const sessionDate = session.lesson?.completedAt ? new Date(session.lesson.completedAt) : new Date(session.lesson?.date);
+    const now = new Date();
+    const diffDays = (now.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (dateFilter === '7days') return diffDays <= 7;
+    if (dateFilter === '30days') return diffDays <= 30;
+    return true;
+  });
+
+  const currentData = filteredSessions[selectedSessionIndex]
   const showPendingCard = stillPending && !pendingResolved && activeTab === 'voice';
 
   return (
@@ -149,19 +173,41 @@ export default function SessionSummaryPage() {
       </div>
 
       <div className="flex flex-col gap-5">
-        <div className="flex p-1 bg-gray-100 rounded-2xl w-fit border border-gray-200 shadow-sm">
-          <button onClick={() => handleTabSwitch('voice')} className={`relative flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl transition-colors z-10 ${activeTab === 'voice' ? 'text-[#9C2FDF]' : 'text-gray-500 hover:text-gray-700'}`}>
-            {activeTab === 'voice' && <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white rounded-xl shadow-sm border border-gray-200/50 z-[-1]" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-            <Mic className="w-4 h-4" /> AI Voice Assistant
-            {showPendingCard && <span className="w-2 h-2 rounded-full bg-[#9C2FDF] animate-pulse ml-1" />}
-          </button>
-          <button onClick={() => handleTabSwitch('collaborative')} className={`relative flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl transition-colors z-10 ${activeTab === 'collaborative' ? 'text-[#1363CB]' : 'text-gray-500 hover:text-gray-700'}`}>
-            {activeTab === 'collaborative' && <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white rounded-xl shadow-sm border border-gray-200/50 z-[-1]" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-            <Users className="w-4 h-4" /> Collaborative Sessions
-          </button>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex p-1 bg-gray-100 rounded-2xl w-fit border border-gray-200 shadow-sm">
+            <button onClick={() => handleTabSwitch('voice')} className={`relative flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl transition-colors z-10 ${activeTab === 'voice' ? 'text-[#9C2FDF]' : 'text-gray-500 hover:text-gray-700'}`}>
+              {activeTab === 'voice' && <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white rounded-xl shadow-sm border border-gray-200/50 z-[-1]" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
+              <Mic className="w-4 h-4" /> AI Voice Assistant
+              {showPendingCard && <span className="w-2 h-2 rounded-full bg-[#9C2FDF] animate-pulse ml-1" />}
+            </button>
+            <button onClick={() => handleTabSwitch('collaborative')} className={`relative flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl transition-colors z-10 ${activeTab === 'collaborative' ? 'text-[#1363CB]' : 'text-gray-500 hover:text-gray-700'}`}>
+              {activeTab === 'collaborative' && <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white rounded-xl shadow-sm border border-gray-200/50 z-[-1]" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
+              <Users className="w-4 h-4" /> Collaborative Sessions
+            </button>
+          </div>
+
+          {/* Date Range & Search Filters */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <input 
+              type="text" 
+              placeholder="Search topics or titles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-3.5 py-2 text-xs font-medium bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#1363CB] transition-colors w-full sm:w-48 shadow-sm"
+            />
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as any)}
+              className="px-3.5 py-2 text-xs font-semibold bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#1363CB] transition-colors shrink-0 shadow-sm cursor-pointer"
+            >
+              <option value="all">📅 All Time</option>
+              <option value="7days">⚡ Last 7 Days</option>
+              <option value="30days">🗓️ Last 30 Days</option>
+            </select>
+          </div>
         </div>
 
-        {(currentSessions.length > 0 || showPendingCard) ? (
+        {(filteredSessions.length > 0 || showPendingCard) ? (
           <div className="flex gap-3 overflow-x-auto pb-4 pt-1 scrollbar-hide">
             {showPendingCard && (
               <div className="flex flex-col items-start px-5 py-3.5 rounded-xl border border-dashed border-[#9C2FDF]/40 bg-[#9C2FDF]/5 text-left min-w-50 shrink-0">
@@ -171,7 +217,7 @@ export default function SessionSummaryPage() {
                 <span className="text-sm font-bold truncate w-full text-gray-500">Recent Session</span>
               </div>
             )}
-            {currentSessions.map((session: any, index: number) => (
+            {filteredSessions.map((session: any, index: number) => (
               <button key={session.id} onClick={() => handleSelectSession(index)} className={`flex flex-col items-start px-5 py-3.5 rounded-xl border text-left min-w-50 shrink-0 transition-all ${selectedSessionIndex === index ? activeTab === 'voice' ? 'bg-[#9C2FDF]/5 border-[#9C2FDF]/30 shadow-sm' : 'bg-[#1363CB]/5 border-[#1363CB]/30 shadow-sm' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
                 <span className={`text-[11px] font-bold uppercase tracking-wider mb-1.5 ${selectedSessionIndex === index ? (activeTab === 'voice' ? 'text-[#9C2FDF]' : 'text-[#1363CB]') : 'text-gray-400'}`}>{session.lesson.date}</span>
                 <span className={`text-sm font-bold truncate w-full ${selectedSessionIndex === index ? 'text-gray-900' : 'text-gray-600'}`}>{session.lesson.title.split(':')[0]}</span>
@@ -182,7 +228,7 @@ export default function SessionSummaryPage() {
           <div className="p-12 text-center bg-white rounded-3xl border border-gray-200 shadow-sm">
             <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-gray-900">No {activeTab} sessions found.</h3>
-            <p className="text-gray-500 text-sm mt-1">Complete a session to see your summaries here.</p>
+            <p className="text-gray-500 text-sm mt-1">Try adjusting your date filter or search query.</p>
           </div>
         )}
       </div>

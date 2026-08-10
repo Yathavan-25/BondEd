@@ -7,9 +7,15 @@ import Image from 'next/image'
 import { auth, googleProvider } from '@/lib/firebase'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createUserWithEmailAndPassword, getAdditionalUserInfo, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser, getAdditionalUserInfo, signOut, signInWithPopup, sendEmailVerification } from 'firebase/auth';
 import toast from 'react-hot-toast';
-import { signInWithPopup } from 'firebase/auth';
+
+// =========================================================================
+// 🚨 EMAIL VERIFICATION TOGGLE FOR REGISTRATION
+// Set REQUIRE_EMAIL_VERIFICATION = true for PRODUCTION deployment.
+// Set REQUIRE_EMAIL_VERIFICATION = false for easy LOCAL TESTING.
+// =========================================================================
+const REQUIRE_EMAIL_VERIFICATION = false;
 
 
 const Register = () => {
@@ -48,22 +54,25 @@ const Register = () => {
     };
 
     const handleGoogleSignIn = async () =>{
+      let googleUser: any = null;
+      let isNewGoogleUser = false;
       try {
         //Google Popup
         const result = await signInWithPopup(auth,googleProvider);
+        googleUser = result.user;
         
         const additionalInfo = getAdditionalUserInfo(result);
+        isNewGoogleUser = !!additionalInfo?.isNewUser;
 
-        if (!additionalInfo?.isNewUser) {
+        if (!isNewGoogleUser) {
           await signOut(auth);
           toast.error("This account is already registered. Please sign in to continue.");
           router.push("/Login");
           return;
         }
         
-        const token = await result.user.getIdToken();
-        //Google's display name needs to be split to get first and last name
-        const names = result.user.displayName?.split(' ') || ['']
+        const token = await googleUser.getIdToken();
+        const names = googleUser.displayName?.split(' ') || ['']
         const firstName = names[0];
         const lastName = names.slice(1).join(' ');
 
@@ -83,11 +92,20 @@ const Register = () => {
         if(response.ok){
           toast.success("Successfully Registered");
           router.push(`/OnBoardingFlow/${data.user.id}`);
+        } else {
+          // Database sync failed -> Roll back Firebase user creation
+          if (googleUser && isNewGoogleUser) {
+            await deleteUser(googleUser).catch(err => console.error("Firebase rollback error:", err));
+          }
+          toast.error(data.message || "Database sync failed. Registration rolled back.");
         }
         
-      } catch (error) {
+      } catch (error: any) {
         console.error("Auth error ", error);
-        toast.error("Registration Failed");
+        if (googleUser && isNewGoogleUser) {
+          await deleteUser(googleUser).catch(err => console.error("Firebase rollback error:", err));
+        }
+        toast.error(error?.message || "Registration Failed");
       }
     }
 
@@ -113,18 +131,11 @@ const Register = () => {
             return;
         }
 
+        let createdUser: any = null;
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password)
-            const additionalInfo = getAdditionalUserInfo(userCredential);
-
-          if (additionalInfo?.isNewUser) {
-            await signOut(auth);
-            toast.error("This account is already registered. Please sign in to continue.");
-            router.push("/Register");
-            return;
-          }
-
-            const token = await userCredential.user.getIdToken();
+            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+            createdUser = userCredential.user;
+            const token = await createdUser.getIdToken();
 
             const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/auth/sync`, {
                 method : "POST",
@@ -140,13 +151,40 @@ const Register = () => {
 
             const data = await response.json();
             if(response.ok) {
+                if (REQUIRE_EMAIL_VERIFICATION) {
+                    try {
+                        await sendEmailVerification(createdUser);
+                    } catch (e) {
+                        console.warn("Failed to send verification email:", e);
+                    }
+                    await signOut(auth);
+                    toast.success("Account created! Please check your email to verify your account before logging in.");
+                    router.push("/Login");
+                    return;
+                }
+
                 toast.success("Successfully Registered");
                 router.push(`/OnBoardingFlow/${data.user.id}`);
+            } else {
+                // Database creation failed -> Roll back Firebase creation!
+                if (createdUser) {
+                    await deleteUser(createdUser).catch(err => console.error("Firebase rollback error:", err));
+                }
+                toast.error(data.message || "Database sync failed. Account creation rolled back.");
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Auth error ", error);
-            toast.error("Registration Failed");
+            if (createdUser && error?.code !== 'auth/email-already-in-use') {
+                await deleteUser(createdUser).catch(err => console.error("Firebase rollback error:", err));
+            }
+
+            if (error?.code === 'auth/email-already-in-use') {
+                toast.error("This email is already registered in Firebase. Try logging in instead.");
+                router.push("/Login");
+            } else {
+                toast.error(error?.message || "Registration Failed");
+            }
         }
     }
 

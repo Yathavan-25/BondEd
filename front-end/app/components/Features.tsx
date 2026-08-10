@@ -87,6 +87,7 @@ export default function PlatformEcosystem() {
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           className="text-[11px] font-bold tracking-[.18em] uppercase text-violet-500 mb-3"
         >
           Platform Ecosystem
@@ -95,6 +96,7 @@ export default function PlatformEcosystem() {
         <motion.h2
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ delay: 0.05 }}
           className="text-4xl md:text-5xl font-extrabold text-primary-color tracking-tight mb-3"
         >
@@ -104,6 +106,7 @@ export default function PlatformEcosystem() {
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
           transition={{ delay: 0.1 }}
           className="text-sm text-gray-500 tracking-widest font-geist"
         >

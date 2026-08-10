@@ -19,7 +19,7 @@ export default function SplineScene() {
   // Use a Ref to hold the Spline engine to avoid re-render loops
   const splineApp = useRef<any>(null); 
   
-  const isInView = useInView(containerRef, { margin: "200px" });
+  const isInView = useInView(containerRef, { margin: "0px" });
 
   useEffect(() => {
     if (!splineApp.current) return;
@@ -27,7 +27,7 @@ export default function SplineScene() {
     if (isInView) {
       splineApp.current.play();
     } else {
-      splineApp.current.stop(); // Frees up the GPU when scrolled away!
+      splineApp.current.stop(); // Frees up GPU immediately when scrolled away!
     }
   }, [isInView]);
 

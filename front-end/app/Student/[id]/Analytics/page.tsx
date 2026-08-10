@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from 'next/navigation';
-import { getAuth } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { motion } from "framer-motion";
 import {
   Download, Flame, Clock, Users, Target, ChevronDown, MoreHorizontal,
@@ -34,28 +35,35 @@ export default function AnalyticsPage() {
   const studentId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!studentId) return;
-      try {
-        setLoading(true);
-        const token = await getAuth().currentUser?.getIdToken();
-        const res = await fetch(`http://localhost:5000/api/summary/analytics/${studentId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            const fetched = await res.json();
-            setData(fetched);
-            // Default select the active day from chart data
-            const activeDay = fetched.chartData.find((d: any) => d.active)?.day || fetched.chartData[0]?.day;
-            setSelectedDay(activeDay);
+    if (!studentId) return;
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          setLoading(true);
+          const token = await user.getIdToken();
+          const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
+          const res = await fetch(`${baseUrl}/api/summary/analytics/${studentId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+              const fetched = await res.json();
+              setData(fetched);
+              // Default select the active day from chart data
+              const activeDay = fetched.chartData?.find((d: any) => d.active)?.day || fetched.chartData?.[0]?.day || "";
+              setSelectedDay(activeDay);
+          }
+        } catch (err) {
+          console.error("Failed to fetch analytics", err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Failed to fetch analytics", err);
-      } finally {
+      } else {
         setLoading(false);
       }
-    };
-    fetchData();
+    });
+
+    return () => unsubscribe();
   }, [studentId]);
 
   if (loading) {
