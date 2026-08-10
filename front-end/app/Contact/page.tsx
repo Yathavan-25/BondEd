@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { Mail, Phone, MapPin, MessageSquare, Send, CheckCircle2 } from 'lucide-react'
+import { Mail, Phone, MessageSquare, Send, CheckCircle2 } from 'lucide-react'
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false)

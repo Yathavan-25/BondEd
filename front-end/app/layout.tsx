@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "AI-Assisted Collaborative Learning Platform",
 };
 
+import AuthGuard from "./components/AuthGuard";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,7 +48,9 @@ export default function RootLayout({
           }},
           duration: 3000,
         }}/>
-        {children}
+        <AuthGuard>
+          {children}
+        </AuthGuard>
       </body>
     </html>
   );

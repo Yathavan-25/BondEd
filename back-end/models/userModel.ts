@@ -58,6 +58,13 @@ export const upsertUserProfile = async (
   });
 };
 
+export const setHasCompletedOnboarding = async (userId: string) => {
+  return await prisma.user.update({
+    where: { id: userId },
+    data: { hasCompletedOnboarding: true }
+  });
+};
+
 export const getProfileByUserId = async (userId: string) => {
   return await prisma.profile.findUnique({
     where: { userId },

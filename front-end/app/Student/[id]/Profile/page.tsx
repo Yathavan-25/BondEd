@@ -2,9 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { getAuth, signOut, sendPasswordResetEmail, updatePassword, updateProfile } from "firebase/auth";
+import { signOut, sendPasswordResetEmail, updatePassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Loader2, LogOut, Save, User, BookOpen, Target, Brain, Zap, Mic, Volume2, CheckCircle2, Sparkles, Shield, Key, Camera, Lock, Mail } from "lucide-react";
+import { Loader2, LogOut, Save, User, BookOpen, Target, Brain, Zap, Mic, CheckCircle2, Shield, Key, Camera, Lock, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 
 const DEEPGRAM_VOICES = [
@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const [voiceFilter, setVoiceFilter] = useState<"All" | "Female" | "Male">("All");
   const [activeTab, setActiveTab] = useState<"learning" | "voice" | "security">("learning");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [profileData, setProfileData] = useState<any>({
     academicGoals: "",
     topics: "",
@@ -73,6 +74,7 @@ export default function ProfilePage() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setProfileData((prev: any) => ({ ...prev, avatarUrl: reader.result }));
       }
     };
@@ -200,9 +202,9 @@ export default function ProfilePage() {
         setPasswordMsg({ text: "Password updated successfully!" });
         setNewPassword("");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Password update error", err);
-      setPasswordMsg({ text: err.message || "Failed to update password. Try re-logging in.", error: true });
+      setPasswordMsg({ text: (err as Error).message || "Failed to update password. Try re-logging in.", error: true });
     } finally {
       setPasswordLoading(false);
     }
@@ -213,8 +215,8 @@ export default function ProfilePage() {
     try {
       await sendPasswordResetEmail(auth, userEmail);
       toast.success(`Password reset email sent to ${userEmail}!`);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send reset email.");
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Failed to send reset email.");
     }
   };
 
@@ -274,6 +276,7 @@ export default function ProfilePage() {
               className="group relative -mt-16 h-24 w-24 shrink-0 overflow-hidden rounded-3xl border-4 border-white bg-gray-100 shadow-lg sm:h-28 sm:w-28"
             >
               {profileData.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={profileData.avatarUrl} alt="Profile" className="h-full w-full object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#1363CB] to-[#9C2FDF] text-2xl font-bold text-white">
@@ -353,7 +356,7 @@ export default function ProfilePage() {
                   <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                     <Target className="h-4 w-4 text-[#1363CB]" /> Learning Preferences
                   </h2>
-                  <p className="mt-1 text-sm text-gray-500">Tell the tutor what you're working toward.</p>
+                  <p className="mt-1 text-sm text-gray-500">Tell the tutor what you&apos;re working toward.</p>
                 </div>
 
                 <div className="mt-6 space-y-6">

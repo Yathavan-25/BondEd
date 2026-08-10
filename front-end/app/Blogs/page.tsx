@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { BookOpen, Calendar, Clock, User, ArrowRight, Sparkles } from 'lucide-react'
+import { BookOpen, Calendar, Clock, User, ArrowRight, } from 'lucide-react'
 
 export const metadata = {
   title: 'Blogs & Articles | BondEd',

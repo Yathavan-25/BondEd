@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { HelpCircle, ChevronDown, Sparkles } from 'lucide-react'
+import { HelpCircle, ChevronDown, } from 'lucide-react'
 
 export default function FAQs() {
   const [openIdx, setOpenIdx] = useState<number | null>(0)

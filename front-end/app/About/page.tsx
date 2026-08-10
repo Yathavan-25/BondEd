@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { GraduationCap, Target, Users, Sparkles, Award, Compass, HeartHandshake, Zap } from 'lucide-react'
+import { GraduationCap, Target, Users, Sparkles, Compass, HeartHandshake, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata = {

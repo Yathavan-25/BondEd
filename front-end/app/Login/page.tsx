@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, googleProvider } from '@/lib/firebase'
-import { getAdditionalUserInfo, signInWithEmailAndPassword, signInWithPopup, signOut, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth'
+import { getAdditionalUserInfo, signInWithEmailAndPassword, signInWithPopup, signOut, sendPasswordResetEmail } from 'firebase/auth'
 import toast from 'react-hot-toast';
 
 const Login = () => {
@@ -23,7 +23,7 @@ const Login = () => {
   // MFA Verification State
   const [isMfaStep, setIsMfaStep] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
-  const [pendingLoginUser, setPendingLoginUser] = useState<any>(null);
+  const [pendingLoginUser, setPendingLoginUser] = useState<unknown>(null);
   const [sendingCode, setSendingCode] = useState(false);
 
   const subContent = [
@@ -47,7 +47,7 @@ const Login = () => {
   };
 
   // Helper to trigger 6-digit MFA OTP code generation & sending
-  const triggerMfaCode = async (userEmail: string, userObj: any) => {
+  const triggerMfaCode = async (userEmail: string, userObj: unknown) => {
     setPendingLoginUser({ ...userObj, email: userEmail });
     setSendingCode(true);
     try {
@@ -190,9 +190,9 @@ const Login = () => {
       toast.success("Password reset email sent! Check your inbox.");
       setIsForgotOpen(false);
       setForgotEmail('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Forgot password error", err);
-      toast.error(err.message || "Failed to send reset email.");
+      toast.error((err as Error).message || "Failed to send reset email.");
     } finally {
       setForgotLoading(false);
     }

@@ -26,6 +26,9 @@ export const submitQuestionnaire = async (req: AuthenticatedRequest, res: Respon
       mfaEnabled
     });
 
+    // Also update the user's hasCompletedOnboarding flag
+    await userModel.setHasCompletedOnboarding(user.id);
+
     return res.status(200).json({ message: 'Profile completed successfully', profile });
   } catch (error) {
     console.error('Error saving profile:', error);

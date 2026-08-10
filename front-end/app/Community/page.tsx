@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { Users, MessageSquare, Award, Flame, Globe, Sparkles, ExternalLink } from 'lucide-react'
+import { Globe, ExternalLink } from 'lucide-react'
 
 export const metadata = {
   title: 'Community | BondEd',

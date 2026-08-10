@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { Code, Terminal, Key, Cpu, Copy, Check } from 'lucide-react'
+import { Code, } from 'lucide-react'
 
 export const metadata = {
   title: 'API Documentation | BondEd',
@@ -55,7 +55,7 @@ export default function ApiDocs() {
   "transcript": "Student A: Let us review backpropagation..."
 }`,
       response: `{
-  "summary": "Key concepts covering gradient descent...",
+  "summary": "concepts covering gradient descent...",
   "flashcards": [
     { "front": "What is backpropagation?", "back": "An algorithm for..." }
   ]

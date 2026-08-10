@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { ChartNoAxesCombined, GraduationCap, Sparkles, Users, Eye, EyeOff, Check, MailCheck, Loader2 } from 'lucide-react'
+import { Check, Sparkles, ChartNoAxesCombined, GraduationCap, Users, Eye, EyeOff, MailCheck } from "lucide-react";
 import Image from 'next/image'
 import { auth, googleProvider } from '@/lib/firebase'
 import { useState, useEffect } from 'react'
@@ -71,7 +71,7 @@ const Register = () => {
             }, 2000);
           }
         }
-      } catch (_err) {
+      } catch {
         // Silently ignore transient network errors during polling
       }
     };
@@ -95,6 +95,7 @@ const Register = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let googleUser: any = null;
     let isNewGoogleUser = false;
     try {
@@ -141,12 +142,12 @@ const Register = () => {
         toast.error(data.message || "Database sync failed. Registration rolled back.");
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Auth error ", error);
       if (googleUser && isNewGoogleUser) {
         await deleteUser(googleUser).catch(err => console.error("Firebase rollback error:", err));
       }
-      toast.error(error?.message || "Registration Failed");
+      toast.error((error as Error)?.message || "Registration Failed");
     }
   }
 
@@ -197,6 +198,7 @@ const Register = () => {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let createdUser: any = null;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
@@ -246,17 +248,18 @@ const Register = () => {
         toast.error(data.message || "Database sync failed. Account creation rolled back.");
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Auth error ", error);
-      if (createdUser && error?.code !== 'auth/email-already-in-use') {
+      const authError = error as { code?: string; message?: string };
+      if (createdUser && authError?.code !== 'auth/email-already-in-use') {
         await deleteUser(createdUser).catch(err => console.error("Firebase rollback error:", err));
       }
 
-      if (error?.code === 'auth/email-already-in-use') {
+      if (authError?.code === 'auth/email-already-in-use') {
         toast.error("This email is already registered in Firebase. Try logging in instead.");
         router.push("/Login");
       } else {
-        toast.error(error?.message || "Registration Failed");
+        toast.error(authError?.message || "Registration Failed");
       }
     }
   }

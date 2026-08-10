@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { HelpCircle, Search, UserCheck, Mic, CreditCard, Shield, ChevronRight, BookOpen } from 'lucide-react'
+import { HelpCircle, Search, UserCheck, Mic, CreditCard, Shield, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata = {
@@ -116,7 +116,7 @@ export default function HelpCenter() {
           <div className="bg-gray-900 text-white rounded-2xl p-8 sm:p-10 text-center border border-gray-800 flex flex-col items-center">
             <h2 className="text-2xl font-bold mb-3">Still Need Assistance?</h2>
             <p className="text-gray-400 text-sm max-w-md mb-6">
-              Can't find the answer you're looking for? Our dedicated support team is available 24/7.
+              Can&apos;t find the answer you&apos;re looking for? Our dedicated support team is available 24/7.
             </p>
             <Link href="/Contact" className="bg-primary-linear text-white font-semibold px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity text-sm">
               Contact Support Team

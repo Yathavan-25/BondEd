@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Calendar, Clock, Video, Play, Sparkles, TrendingUp, CalendarDays,
+  Search, Calendar, Clock, Video, Play, Sparkles, CalendarDays,
   ChevronRight, Bookmark, Radio, Loader2, Plus, X, Users, BookOpen, Type,
   AlignLeft, Timer, Check, UserPlus, Mail, Mic
 } from "lucide-react";
@@ -76,7 +76,7 @@ export default function SessionsPage() {
           }
           setLoading(false);
         });
-      } catch (err) {
+      } catch {
         console.error(err);
         setLoading(false);
       }
@@ -261,7 +261,7 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
           } else {
               toast.error(data.error || "Recording not found.");
           }
-      } catch (err) {
+      } catch {
           toast.error("Network error fetching recording.");
       } finally {
           setLoadingRec(false);
@@ -462,7 +462,7 @@ function CreateSessionModal({
           const data = await friendsRes.json();
           setFriends(Array.isArray(data) ? data : []);
         }
-      } catch (err) {
+      } catch {
         console.error(err);
       } finally {
         setTopicsLoading(false);

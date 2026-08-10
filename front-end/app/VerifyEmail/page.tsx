@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, } from "lucide-react";
 import { auth } from "@/lib/firebase";
 
 export default function VerifyEmailPage() {
-  const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
+  const [, setIsChecking] = useState(true);
+const [, setIsLoggedIn] = useState(false);
+useEffect(() => {
     // When the user lands here, Firebase has usually already verified the email via the link.
     // Let's just check if they are logged in on this browser.
     const unsubscribe = auth.onAuthStateChanged(async (user) => {

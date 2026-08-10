@@ -1,8 +1,6 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { Compass, CheckCircle2, UserPlus, Mic, FileText, Zap, Sparkles } from 'lucide-react'
-import Link from 'next/link'
-
+import { Compass, CheckCircle2, UserPlus, Mic, FileText, Zap, } from 'lucide-react'
 export const metadata = {
   title: 'Student Guide | BondEd',
   description: 'Complete user manual and best practices for collaborative learning with BondEd.',

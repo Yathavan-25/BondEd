@@ -257,7 +257,8 @@ export default function OnboardingFlow() {
             return;
           }
 
-          const res = await fetch('http://localhost:5000/api/profile/questionnaire', {
+          const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
+          const res = await fetch(`${baseUrl}/api/profile/questionnaire`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -680,7 +681,7 @@ export default function OnboardingFlow() {
                     <AlertCircle className="w-4 h-4" /> You can update these preferences later in settings.
                   </p>
                   <button
-                    onClick={() => router.push(`/Student/${studentId}/Dashboard`)}
+                    onClick={() => router.replace(`/Student/${studentId}/Dashboard`)}
                     className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-md transition-all hover:shadow-xl hover:-translate-y-0.5">
                     Go to Dashboard <ArrowRight className="w-4 h-4" />
                   </button>

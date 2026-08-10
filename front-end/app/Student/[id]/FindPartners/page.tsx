@@ -172,7 +172,7 @@ export default function FindPartnersPage() {
   const [connectModalPartner, setConnectModalPartner] = useState<MatchData | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [requestMessage, setRequestMessage] = useState<string>("");
-  const [isInitialChatMode, setIsInitialChatMode] = useState<boolean>(false);
+  const [, setIsInitialChatMode] = useState<boolean>(false);
 
   // CHAT / PROFILE SLIDE-OVER STATE
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
