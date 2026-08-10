@@ -77,9 +77,13 @@ export default function AnalyticsPage() {
   
   if (!data) return <div className="p-8 text-center text-red-500">Failed to load data. Please try again.</div>;
 
-  const selectedValue = data.chartData.find((d: any) => d.day === selectedDay)?.value ?? "—";
-  const voicePct = (data.creditsData.voice.used[creditFilter] / data.creditsData.voice.total) * 100;
-  const collabPct = (data.creditsData.collab.used[creditFilter] / data.creditsData.collab.total) * 100;
+  const selectedValue = data.chartData?.find((d: any) => d.day === selectedDay)?.value ?? "—";
+  const voiceTotal = data.creditsData?.voice?.total || 1;
+  const collabTotal = data.creditsData?.collab?.total || 1;
+  const voiceUsed = data.creditsData?.voice?.used?.[creditFilter] || 0;
+  const collabUsed = data.creditsData?.collab?.used?.[creditFilter] || 0;
+  const voicePct = Math.min(100, Math.max(0, (voiceUsed / voiceTotal) * 100));
+  const collabPct = Math.min(100, Math.max(0, (collabUsed / collabTotal) * 100));
 
   // Icon mapping for dynamic backend stats
   const ICONS = { Clock, Flame, Users, Target };
@@ -266,30 +270,38 @@ export default function AnalyticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.topPartners.map((p: any, i: number) => (
-                  <motion.tr
-                    key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }}
-                    className="border-t border-black/5 transition-colors hover:bg-gray-50/60"
-                  >
-                    <td className="px-7 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br text-sm font-semibold text-white shadow-sm ${p.bg}`}>
-                          {p.initials}
+                {data.topPartners && data.topPartners.length > 0 ? (
+                  data.topPartners.map((p: any, i: number) => (
+                    <motion.tr
+                      key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }}
+                      className="border-t border-black/5 transition-colors hover:bg-gray-50/60"
+                    >
+                      <td className="px-7 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br text-sm font-semibold text-white shadow-sm ${p.bg}`}>
+                            {p.initials}
+                          </div>
+                          <span className="font-medium text-gray-900">{p.name}</span>
                         </div>
-                        <span className="font-medium text-gray-900">{p.name}</span>
-                      </div>
+                      </td>
+                      <td className="px-4 py-4 text-gray-600">{p.subject}</td>
+                      <td className="px-4 py-4 text-gray-600">{p.sessions}</td>
+                      <td className="px-4 py-4 text-gray-600">{p.topHours}</td>
+                      <td className="px-4 py-4">
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                          {p.match}
+                        </span>
+                      </td>
+                      <td className="px-7 py-4 text-right font-semibold text-gray-900">{p.hours}</td>
+                    </motion.tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-7 py-8 text-center text-gray-500 font-medium">
+                      No study partners yet. Join or host a collaborative study session to track partner stats!
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{p.subject}</td>
-                    <td className="px-4 py-4 text-gray-600">{p.sessions}</td>
-                    <td className="px-4 py-4 text-gray-600">{p.topHours}</td>
-                    <td className="px-4 py-4">
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                        {p.match}
-                      </span>
-                    </td>
-                    <td className="px-7 py-4 text-right font-semibold text-gray-900">{p.hours}</td>
-                  </motion.tr>
-                ))}
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

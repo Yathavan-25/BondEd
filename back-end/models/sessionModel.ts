@@ -84,6 +84,9 @@ export const SessionModel = {
     },
 
     getUserAnalytics: async (userId: string) => {
+        const profile = await prisma.profile.findUnique({ where: { userId } });
+        const userCredits = await prisma.userCredits.findUnique({ where: { userId } });
+
         const sessions = await prisma.session.findMany({
             where: {
                 status: { in: ['completed', 'Completed'] },
@@ -94,8 +97,9 @@ export const SessionModel = {
 
         let totalMins = 0;
         const uniquePartners = new Set<string>();
-        const partnerStats: Record<string, { name: string, initials: string, time: number, count: number }> = {};
+        const partnerStats: Record<string, { name: string, initials: string, time: number, count: number, subjects: Record<string, number> }> = {};
         const dailyMins: Record<string, number> = { "Mon": 0, "Tue": 0, "Wed": 0, "Thu": 0, "Fri": 0, "Sat": 0, "Sun": 0 };
+        const subjectMinsMap: Record<string, number> = {};
 
         sessions.forEach(session => {
             const mins = getDurationMins(session.startTime, session.endTime);
@@ -106,6 +110,9 @@ export const SessionModel = {
                 dailyMins[dayName] = (dailyMins[dayName] ?? 0) + mins;
             }
 
+            const subj = session.subject || "General Study";
+            subjectMinsMap[subj] = (subjectMinsMap[subj] || 0) + mins;
+
             const peers = session.participants.filter(p => p.id !== userId);
             if (session.hostId !== userId) peers.push(session.host);
             
@@ -113,45 +120,172 @@ export const SessionModel = {
                 uniquePartners.add(peer.id);
                 let pStat = partnerStats[peer.id];
                 if (!pStat) {
-                    pStat = { name: `${peer.firstName} ${peer.lastName || ''}`.trim(), initials: `${peer.firstName?.[0] || ''}${peer.lastName?.[0] || ''}`, time: 0, count: 0 };
+                    pStat = {
+                        name: `${peer.firstName} ${peer.lastName || ''}`.trim(),
+                        initials: `${peer.firstName?.[0] || ''}${peer.lastName?.[0] || ''}`,
+                        time: 0,
+                        count: 0,
+                        subjects: {}
+                    };
                     partnerStats[peer.id] = pStat;
                 }
                 pStat.time += mins;
                 pStat.count += 1;
+                pStat.subjects[subj] = (pStat.subjects[subj] || 0) + mins;
             });
         });
 
-        const topPartners = Object.values(partnerStats)
-            .sort((a, b) => b.time - a.time).slice(0, 3)
-            .map((p, i) => ({
-                id: i + 1, name: p.name, initials: p.initials, sessions: p.count, hours: `${(p.time / 60).toFixed(1)} hrs`, topHours: `${Math.floor(p.time / 60)}h ${p.time % 60}m`, subject: "Collaborative Study", match: "90%+", bg: ["from-indigo-500 to-purple-500", "from-orange-400 to-pink-500", "from-blue-400 to-cyan-500"][i % 3]
-            }));
+        const colors = [
+            "bg-[#1363CB]", "bg-purple-600", "bg-emerald-500", "bg-amber-500", 
+            "bg-pink-500", "bg-indigo-500", "bg-cyan-500", "bg-rose-500"
+        ];
 
+        let timeBySubject = Object.entries(subjectMinsMap).map(([subject, mins], idx) => {
+            const percent = totalMins > 0 ? Math.round((mins / totalMins) * 100) : 0;
+            return {
+                subject,
+                hours: mins >= 60 ? `${(mins / 60).toFixed(1)}h` : `${mins}m`,
+                percent,
+                color: colors[idx % colors.length]
+            };
+        }).sort((a, b) => b.percent - a.percent);
+
+        if (timeBySubject.length === 0) {
+            const userSubjects = profile?.subjects && profile.subjects.length > 0 ? profile.subjects : ["General Study"];
+            const equalShare = Math.floor(100 / userSubjects.length);
+            timeBySubject = userSubjects.map((subject, idx) => ({
+                subject,
+                hours: "0.0h",
+                percent: equalShare,
+                color: colors[idx % colors.length]
+            }));
+        }
+
+        const topPartners = Object.values(partnerStats)
+            .sort((a, b) => b.time - a.time).slice(0, 5)
+            .map((p, i) => {
+                const topSubjEntry = Object.entries(p.subjects).sort((a, b) => b[1] - a[1])[0];
+                const topSubj = topSubjEntry ? topSubjEntry[0] : "Collaborative Study";
+                return {
+                    id: i + 1,
+                    name: p.name,
+                    initials: p.initials,
+                    sessions: p.count,
+                    hours: p.time >= 60 ? `${(p.time / 60).toFixed(1)} hrs` : `${p.time} mins`,
+                    topHours: `${Math.floor(p.time / 60)}h ${p.time % 60}m`,
+                    subject: topSubj,
+                    match: `${Math.min(99, 85 + (p.count * 3))}%`,
+                    bg: ["from-indigo-500 to-purple-500", "from-orange-400 to-pink-500", "from-blue-400 to-cyan-500", "from-emerald-400 to-teal-500"][i % 4]
+                };
+            });
+
+        const maxDailyMins = Math.max(...Object.values(dailyMins), 120);
         const chartData = Object.keys(dailyMins).map(day => {
             const mins = dailyMins[day] ?? 0;
-            return { day, height: Math.min(100, Math.max(10, (mins / 120) * 100)), value: `${(mins / 60).toFixed(1)}h`, active: day === new Date().toLocaleDateString('en-US', { weekday: 'short' }) };
+            const height = mins > 0 ? Math.min(100, Math.max(12, Math.round((mins / maxDailyMins) * 100))) : 8;
+            return {
+                day,
+                height,
+                value: mins >= 60 ? `${(mins / 60).toFixed(1)}h` : `${mins}m`,
+                active: day === new Date().toLocaleDateString('en-US', { weekday: 'short' })
+            };
         });
 
         const usageLogs = await prisma.usageLog.findMany({ where: { userId } });
-        let voiceMins = 0; let collabMins = 0;
+        const now = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        const sevenDaysMs = 7 * oneDayMs;
+
+        let voiceDay = 0, voiceWeek = 0, voiceMonth = 0;
+        let collabDay = 0, collabWeek = 0, collabMonth = 0;
+
         usageLogs.forEach(log => {
-            if (log.service === 'vapi') voiceMins += log.usage;
-            if (log.service === 'daily') collabMins += log.usage;
+            const age = now - new Date(log.createdAt).getTime();
+            const usageMins = Math.round(log.usage);
+
+            if (log.service === 'vapi') {
+                voiceMonth += usageMins;
+                if (age <= sevenDaysMs) voiceWeek += usageMins;
+                if (age <= oneDayMs) voiceDay += usageMins;
+            } else if (log.service === 'daily') {
+                collabMonth += usageMins;
+                if (age <= sevenDaysMs) collabWeek += usageMins;
+                if (age <= oneDayMs) collabDay += usageMins;
+            }
+        });
+
+        const vapiRemaining = userCredits?.vapiMinutesRemaining ?? 60;
+        const dailyRemaining = userCredits?.dailyMinutesRemaining ?? 300;
+
+        const voiceTotal = Math.max(vapiRemaining + voiceMonth, 60);
+        const collabTotal = Math.max(dailyRemaining + collabMonth, 300);
+
+        const creditsData = {
+            voice: {
+                total: voiceTotal,
+                used: {
+                    Day: Math.round(voiceDay),
+                    Week: Math.round(voiceWeek),
+                    Month: Math.round(voiceMonth)
+                }
+            },
+            collab: {
+                total: collabTotal,
+                used: {
+                    Day: Math.round(collabDay),
+                    Week: Math.round(collabWeek),
+                    Month: Math.round(collabMonth)
+                }
+            }
+        };
+
+        const totalHoursVal = (totalMins / 60).toFixed(1);
+        const avgSessionVal = sessions.length ? `${Math.round(totalMins / sessions.length)} min` : "0 min";
+
+        const trendData = [0, 0, 0, 0, 0, 0, 0];
+        const dayKeys = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        dayKeys.forEach((d, idx) => {
+            trendData[idx] = dailyMins[d] || 0;
         });
 
         return {
             topPartners,
-            timeBySubject: [{ subject: "Core Subjects", hours: `${(totalMins / 60).toFixed(1)}h`, percent: 100, color: "bg-[#1363CB]" }],
-            creditsData: {
-                voice: { total: 500, used: { Day: Math.floor(voiceMins/30), Week: Math.floor(voiceMins/4), Month: Math.floor(voiceMins) } },
-                collab: { total: 1000, used: { Day: Math.floor(collabMins/30), Week: Math.floor(collabMins/4), Month: Math.floor(collabMins) } },
-            },
+            timeBySubject,
+            creditsData,
             chartData,
             stats: [
-                { title: "Total hours", value: Math.floor(totalMins / 60).toString(), subtitle: "TOTAL LOGGED", subColor: "text-emerald-600", stroke: "#10b981", trend: [10, 20, 30, 40, 50, 60, totalMins] },
-                { title: "Avg session", value: sessions.length ? `${Math.floor(totalMins / sessions.length)} min` : "0 min", subtitle: "AVERAGE TIME", subColor: "text-emerald-600", stroke: "#f97316", trend: [40, 42, 45, 48, 50, 52, 55] },
-                { title: "Unique partners", value: uniquePartners.size.toString(), subtitle: "STUDY BUDDIES", subColor: "text-blue-600", stroke: "#2563eb", trend: [1, 2, 2, 3, 3, 4, uniquePartners.size] },
-                { title: "Sessions Completed", value: sessions.length.toString(), subtitle: "ALL TIME", subColor: "text-blue-600", stroke: "#8b5cf6", trend: [1, 5, 10, 15, 20, 22, sessions.length] },
+                {
+                    title: "Total hours",
+                    value: totalHoursVal,
+                    subtitle: "TOTAL LOGGED",
+                    subColor: "text-emerald-600",
+                    stroke: "#10b981",
+                    trend: trendData.some(v => v > 0) ? trendData : [0, 1, 2, 3, 5, 8, Math.round(totalMins / 60)]
+                },
+                {
+                    title: "Avg session",
+                    value: avgSessionVal,
+                    subtitle: "AVERAGE TIME",
+                    subColor: "text-emerald-600",
+                    stroke: "#f97316",
+                    trend: [30, 35, 40, 42, 45, 48, sessions.length ? Math.round(totalMins / sessions.length) : 0]
+                },
+                {
+                    title: "Unique partners",
+                    value: uniquePartners.size.toString(),
+                    subtitle: "STUDY BUDDIES",
+                    subColor: "text-blue-600",
+                    stroke: "#2563eb",
+                    trend: [0, 1, 1, 2, 2, 3, uniquePartners.size]
+                },
+                {
+                    title: "Sessions Completed",
+                    value: sessions.length.toString(),
+                    subtitle: "ALL TIME",
+                    subColor: "text-purple-600",
+                    stroke: "#8b5cf6",
+                    trend: [0, 1, 2, 4, 6, 8, sessions.length]
+                }
             ]
         };
     },
