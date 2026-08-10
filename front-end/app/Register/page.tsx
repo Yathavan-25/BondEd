@@ -40,6 +40,7 @@ const Register = () => {
 
   // Verification Pending States
   const [isPendingVerification, setIsPendingVerification] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [registeredUserId, setRegisteredUserId] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -56,21 +57,24 @@ const Register = () => {
 
   // Polling to auto-detect when user verifies email in another tab or phone
   useEffect(() => {
-    if (!isPendingVerification || !registeredUserId) return;
+    if (!isPendingVerification || !registeredUserId || isVerified) return;
 
     const checkVerificationStatus = async () => {
       if (auth.currentUser) {
         await auth.currentUser.reload();
         if (auth.currentUser.emailVerified) {
+          setIsVerified(true);
           toast.success("Email verified! Starting onboarding...");
-          router.push(`/OnBoardingFlow/${registeredUserId}`);
+          setTimeout(() => {
+            router.push(`/OnBoardingFlow/${registeredUserId}`);
+          }, 1500);
         }
       }
     };
 
     const interval = setInterval(checkVerificationStatus, 3000);
     return () => clearInterval(interval);
-  }, [isPendingVerification, registeredUserId, router]);
+  }, [isPendingVerification, registeredUserId, isVerified, router]);
 
   const passwordChecks = [
     { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -169,13 +173,16 @@ const Register = () => {
     if (auth.currentUser) {
       await auth.currentUser.reload();
       if (auth.currentUser.emailVerified) {
+        setIsVerified(true);
         toast.success("Email verified! Starting onboarding...");
-        router.push(`/OnBoardingFlow/${registeredUserId}`);
+        setTimeout(() => {
+          router.push(`/OnBoardingFlow/${registeredUserId}`);
+        }, 1200);
       } else {
         toast.error("Email not verified yet. Please check your inbox and click the verification link.");
       }
     } else {
-      toast.error("User session expired. Please log in or check your email verification link.");
+      toast.error("User session expired. Please check your email verification link.");
     }
   };
 
@@ -315,55 +322,62 @@ const Register = () => {
             <div className="w-full lg:mr-10.25 lg:my-8.75 m-6 p-8 sm:p-10 bg-white/35 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.15)] flex flex-col text-white">
 
               {isPendingVerification ? (
-                <div className="flex flex-col items-center text-center font-geist">
-                  <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg mb-6 text-white animate-pulse">
-                    <MailCheck className="w-8 h-8" />
+                <div className="flex flex-col items-center text-center font-geist py-4">
+                  <div className={`w-20 h-20 rounded-3xl flex items-center justify-center backdrop-blur-xl border shadow-2xl mb-6 text-white transition-all ${
+                    isVerified ? "bg-emerald-500/30 border-emerald-400/50" : "bg-white/20 border-white/30 animate-pulse"
+                  }`}>
+                    {isVerified ? <Check className="w-10 h-10 text-emerald-300" /> : <MailCheck className="w-10 h-10 text-white" />}
                   </div>
-                  <h2 className="text-3xl font-bold tracking-tight mb-2">
-                    Verify Your Email
+
+                  <h2 className="text-3xl font-bold tracking-tight mb-3 text-white">
+                    {isVerified ? "Email Verified!" : "Verify Your Email"}
                   </h2>
-                  <p className="text-sm text-white/80 font-geist max-w-sm mb-6 leading-relaxed">
-                    We&apos;ve sent a verification link to <strong className="text-white underline">{registeredEmail}</strong>.
-                    Please check your inbox and click the link to activate your account and start onboarding.
+
+                  <p className="text-sm text-white/85 font-medium max-w-sm mb-6 leading-relaxed">
+                    {isVerified ? (
+                      "Your email has been successfully verified! Launching your personalized onboarding flow..."
+                    ) : (
+                      <>
+                        Please verify your email address to continue. We&apos;ve sent a confirmation link to <strong className="text-white underline">{registeredEmail}</strong>.
+                      </>
+                    )}
                   </p>
 
                   {/* Status Indicator */}
-                  <div className="w-full bg-white/10 border border-white/20 rounded-xl p-4 mb-6 flex items-center justify-center gap-3">
+                  <div className={`w-full rounded-2xl p-4 mb-6 flex items-center justify-center gap-3 border transition-all ${
+                    isVerified
+                      ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                      : "bg-amber-500/20 border-amber-400/30 text-amber-200"
+                  }`}>
                     <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isVerified ? "bg-emerald-400" : "bg-amber-400"}`}></span>
+                      <span className={`relative inline-flex rounded-full h-3 w-3 ${isVerified ? "bg-emerald-500" : "bg-amber-500"}`}></span>
                     </span>
-                    <span className="text-xs font-semibold tracking-wide text-white/90">
-                      Waiting for email verification...
+                    <span className="text-xs font-bold tracking-wide uppercase">
+                      {isVerified ? "Verification Complete — Launching Onboarding" : "Waiting for Email Verification..."}
                     </span>
                   </div>
 
-                  <div className="w-full flex flex-col gap-3">
-                    <button
-                      type="button"
-                      onClick={handleCheckVerification}
-                      className="w-full py-3 px-4 rounded-xl bg-white text-gray-900 font-bold hover:bg-white/90 transition-all shadow-md active:scale-[0.98]"
-                    >
-                      I&apos;ve Verified My Email
-                    </button>
+                  {!isVerified && (
+                    <div className="w-full flex flex-col gap-3">
+                      <button
+                        type="button"
+                        onClick={handleCheckVerification}
+                        className="w-full py-3.5 px-4 rounded-xl bg-white text-gray-900 font-bold hover:bg-white/90 transition-all shadow-lg active:scale-[0.98]"
+                      >
+                        I&apos;ve Verified My Email
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={handleResendEmail}
-                      disabled={resendCooldown > 0 || isResending}
-                      className="w-full py-3 px-4 rounded-xl border border-white/30 bg-white/10 font-semibold text-white hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isResending ? "Sending..." : resendCooldown > 0 ? `Resend email in ${resendCooldown}s` : "Resend Verification Email"}
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsPendingVerification(false)}
-                    className="mt-8 text-xs text-white/70 hover:text-white underline transition-colors"
-                  >
-                    Entered wrong email? Back to registration
-                  </button>
+                      <button
+                        type="button"
+                        onClick={handleResendEmail}
+                        disabled={resendCooldown > 0 || isResending}
+                        className="w-full py-3.5 px-4 rounded-xl border border-white/30 bg-white/10 font-semibold text-white hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isResending ? "Sending..." : resendCooldown > 0 ? `Resend email in ${resendCooldown}s` : "Resend Verification Email"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
