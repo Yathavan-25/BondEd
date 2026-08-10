@@ -15,7 +15,6 @@
     "@lottiefiles/dotlottie-react": "^0.19.4",
     "@mui/icons-material": "^9.1.1",
     "@mui/material": "^9.1.1",
-    "@next/swc-win32-x64-msvc": "16.2.7",
     "@splinetool/react-spline": "^4.1.0",
     "@vapi-ai/web": "^2.5.2",
     "class-variance-authority": "^0.7.1",
