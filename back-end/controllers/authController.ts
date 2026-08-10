@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import * as userModel from '../models/userModel.js';
 
-import * as SibApiV3Sdk from '@getbrevo/brevo';
+import { BrevoClient } from '@getbrevo/brevo';
 
 // In-memory OTP store for MFA codes: email -> { code, expiresAt }
 const mfaStore = new Map<string, { code: string; expiresAt: number }>();
@@ -32,9 +32,7 @@ export const sendMfaCode = async (req: Request, res: Response) => {
 
     if (brevoApiKey) {
       try {
-        const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-        const apiKey = apiInstance.authentications['apiKey'] as SibApiV3Sdk.ApiKeyAuth;
-        apiKey.apiKey = brevoApiKey;
+        const brevo = new BrevoClient({ apiKey: brevoApiKey });
         const fromEmail = process.env.BREVO_FROM_EMAIL || 'dev.bonded@gmail.com';
         const fromName = 'BondEd Security';
 
@@ -107,14 +105,13 @@ export const sendMfaCode = async (req: Request, res: Response) => {
                       </body>
                       </html>`;
 
-        const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-        sendSmtpEmail.sender = { email: fromEmail, name: fromName };
-        sendSmtpEmail.to = [{ email }];
-        sendSmtpEmail.subject = '🔒 Your BondEd 2FA Security Code';
-        sendSmtpEmail.textContent = `BondEd Two-Factor Authentication\n\nYour 6-digit verification code is: ${code}\n\nThis code expires in 10 minutes.\nIf you did not request this, please secure your account immediately.`;
-        sendSmtpEmail.htmlContent = html;
-
-        await apiInstance.sendTransacEmail(sendSmtpEmail);
+        await brevo.transactionalEmails.sendTransacEmail({
+          sender: { email: fromEmail, name: fromName },
+          to: [{ email }],
+          subject: '🔒 Your BondEd 2FA Security Code',
+          textContent: `BondEd Two-Factor Authentication\n\nYour 6-digit verification code is: ${code}\n\nThis code expires in 10 minutes.\nIf you did not request this, please secure your account immediately.`,
+          htmlContent: html,
+        });
         console.log(`✅ [MFA EMAIL] Verification code sent to ${email} via Brevo`);
       } catch (mailErr: any) {
         const errMsg = mailErr?.message || String(mailErr);
