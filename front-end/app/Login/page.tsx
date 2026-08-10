@@ -298,10 +298,6 @@ const Login = () => {
                       className="h-12 w-full text-center tracking-widest text-lg font-mono rounded-xl border border-white/20 bg-white/10 px-4 text-white outline-none focus:border-white/50 focus:bg-white/20"
                     />
                   </div>
-
-                  {/* <button type="submit" className="w-full border-2 bg-primary-linear px-6 py-3 text-white font-bold rounded-xl hover:bg-white hover:text-black transition-all">
-                    Verify &amp; Continue
-                  </button> */}
                   <button type='submit' className="group border-2 bg-primary-linear px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all cursor-pointer">
                     <span className="group-hover:text-primary-linear group-hover:font-bold">Verify &amp; Continue</span>
                   </button>
