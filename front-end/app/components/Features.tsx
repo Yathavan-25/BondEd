@@ -1,7 +1,4 @@
 'use client'
-
-
-
 import { motion, Variants } from 'framer-motion'
 
 import {
@@ -13,8 +10,6 @@ import {
   Users,
   ShieldCheck,
 } from 'lucide-react'
-
-
 
 const FEATURES = [
 
