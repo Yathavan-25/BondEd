@@ -234,21 +234,24 @@ export const getUserCount = async (_req: Request, res: Response) => {
 
 export const sendVerificationEmail = async (req: Request, res: Response) => {
   try {
-    const { email } = req.body || {};
+    const { email, userId } = req.body || {};
     if (!email) {
       return res.status(400).json({ message: 'Email is required to send verification link.' });
     }
 
-    const clientUrl = process.env.CLIENT_URL || 'https://bond-ed.vercel.app';
+    const clientUrl = process.env.CLIENT_URL || process.env.NEXT_PUBLIC_URL || 'https://bond-ed.vercel.app';
+    const targetPath = userId ? `/OnBoardingFlow/${userId}` : '/Login';
+    const redirectUrl = `${clientUrl.replace(/\/$/, '')}${targetPath}`;
+
     const actionCodeSettings = {
-      url: `${clientUrl}/Login`
+      url: redirectUrl
     };
 
-    let link = `${clientUrl}/Login`;
+    let link = redirectUrl;
     try {
       link = await firebaseAdminAuth.generateEmailVerificationLink(email, actionCodeSettings);
     } catch (linkErr) {
-      console.warn('Could not generate Firebase verification link, falling back to direct login URL:', linkErr);
+      console.warn('Could not generate Firebase verification link, falling back to target URL:', linkErr);
     }
 
     const brevoApiKey = process.env.BREVO_API_KEY?.trim();
