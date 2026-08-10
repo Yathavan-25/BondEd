@@ -234,14 +234,16 @@ export const getUserCount = async (_req: Request, res: Response) => {
 
 export const sendVerificationEmail = async (req: Request, res: Response) => {
   try {
-    const { email, userId } = req.body || {};
+    const { email } = req.body || {};
     if (!email) {
       return res.status(400).json({ message: 'Email is required to send verification link.' });
     }
 
     const clientUrl = process.env.CLIENT_URL || process.env.NEXT_PUBLIC_URL || 'https://bond-ed.vercel.app';
-    const targetPath = userId ? `/OnBoardingFlow/${userId}` : '/Login';
-    const redirectUrl = `${clientUrl.replace(/\/$/, '')}${targetPath}`;
+    // Redirect the Firebase verification link to a simple confirmation page, NOT OnBoardingFlow.
+    // This ensures that clicking the link on a phone only shows a confirmation message,
+    // while the original register tab (where polling runs) handles the actual onboarding redirect.
+    const redirectUrl = `${clientUrl.replace(/\/$/, '')}/VerifyEmail`;
 
     const actionCodeSettings = {
       url: redirectUrl
