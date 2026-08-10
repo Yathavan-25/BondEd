@@ -121,7 +121,7 @@ const Login = () => {
 
     } catch (error) {
       console.error("Auth error ", error);
-      toast.error("Registration Failed");
+      toast.error("Login Failed");
     }
   }
 
