@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import * as userModel from '../models/userModel.js';
 
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 // In-memory OTP store for MFA codes: email -> { code, expiresAt }
 const mfaStore = new Map<string, { code: string; expiresAt: number }>();
@@ -27,28 +27,13 @@ export const sendMfaCode = async (req: Request, res: Response) => {
 
     mfaStore.set(email.toLowerCase(), { code, expiresAt });
 
-    // Dispatch 6-digit code via email using Nodemailer
-    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const smtpUser = process.env.SMTP_USER?.trim();
-    const rawPass = process.env.SMTP_PASS?.trim() || '';
-    const smtpPass = rawPass.replace(/["'\s]/g, '');
+    // Dispatch 6-digit code via email using Resend (HTTP API — works on Railway free tier)
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
 
-    if (smtpUser && smtpPass) {
+    if (resendApiKey) {
       try {
-        const isGmail = smtpHost.includes('gmail') || smtpUser.endsWith('@gmail.com');
-        const port = Number(process.env.SMTP_PORT) || (isGmail ? 587 : 587);
-        const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : false;
-
-        const transporter = nodemailer.createTransport({
-          host: isGmail ? 'smtp.gmail.com' : smtpHost,
-          port,
-          secure, // false for 587 (STARTTLS)
-          family: 4, // Force IPv4 — Railway does not support outbound IPv6
-          auth: { user: smtpUser, pass: smtpPass },
-          connectionTimeout: 10000, // 10 seconds
-          greetingTimeout: 5000,
-          socketTimeout: 10000
-        } as any);
+        const resend = new Resend(resendApiKey);
+        const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
         const html = `<!DOCTYPE html>
                       <html lang="en">
@@ -119,36 +104,34 @@ export const sendMfaCode = async (req: Request, res: Response) => {
                       </body>
                       </html>`;
 
-        // Verify SMTP credentials before attempting to send
-        await transporter.verify();
-        console.log(`✅ [MFA SMTP] SMTP connection verified, sending to ${email}...`);
-
-        await transporter.sendMail({
-          from: `"BondEd Security" <${smtpUser}>`,
+        const { error: sendError } = await resend.emails.send({
+          from: `BondEd Security <${fromAddress}>`,
           to: email,
           subject: `🔒 Your BondEd 2FA Security Code`,
           text: `BondEd Two-Factor Authentication\n\nYour 6-digit verification code is: ${code}\n\nThis code expires in 10 minutes.\nIf you did not request this, please secure your account immediately.`,
           html,
-          headers: {
-            'X-Priority': '1 (Highest)',
-            'X-MSMail-Priority': 'High',
-            'Importance': 'High'
-          }
         });
-        console.log(`✅ [MFA EMAIL] Verification code sent to ${email}`);
+
+        if (sendError) {
+          console.error('❌ [MFA EMAIL ERROR] Resend API error:', JSON.stringify(sendError));
+          return res.status(500).json({
+            message: 'Failed to send MFA email via Resend.',
+            detail: sendError.message
+          });
+        }
+
+        console.log(`✅ [MFA EMAIL] Verification code sent to ${email} via Resend`);
       } catch (mailErr: any) {
         const errMsg = mailErr?.message || String(mailErr);
-        console.error('❌ [MFA EMAIL ERROR] SMTP failure:', errMsg);
-        console.error('❌ [MFA EMAIL ERROR] Full error:', JSON.stringify(mailErr, Object.getOwnPropertyNames(mailErr)));
-        // Return 500 so the error surfaces — don't silently return 200 on email failure
+        console.error('❌ [MFA EMAIL ERROR] Resend exception:', errMsg);
         return res.status(500).json({
-          message: 'Failed to send MFA email. Check SMTP credentials in Railway environment variables.',
+          message: 'Failed to send MFA email. Check RESEND_API_KEY in Railway environment variables.',
           detail: errMsg
         });
       }
     } else {
-      console.log(`⚠️ [MFA NOTICE] SMTP_USER / SMTP_PASS not set. Set these in Railway environment variables.`);
-      return res.status(500).json({ message: 'Email service not configured. SMTP_USER and SMTP_PASS are missing.' });
+      console.log(`⚠️ [MFA NOTICE] RESEND_API_KEY not set in Railway environment variables.`);
+      return res.status(500).json({ message: 'Email service not configured. Add RESEND_API_KEY to Railway environment variables.' });
     }
 
     return res.status(200).json({
