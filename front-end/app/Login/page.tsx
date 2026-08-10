@@ -20,10 +20,16 @@ const Login = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
 
+  interface PendingUser {
+    id?: string;
+    email?: string | null;
+    [key: string]: unknown;
+  }
+
   // MFA Verification State
   const [isMfaStep, setIsMfaStep] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
-  const [pendingLoginUser, setPendingLoginUser] = useState<unknown>(null);
+  const [pendingLoginUser, setPendingLoginUser] = useState<PendingUser | null>(null);
   const [sendingCode, setSendingCode] = useState(false);
 
   const subContent = [
@@ -47,7 +53,7 @@ const Login = () => {
   };
 
   // Helper to trigger 6-digit MFA OTP code generation & sending
-  const triggerMfaCode = async (userEmail: string, userObj: unknown) => {
+  const triggerMfaCode = async (userEmail: string, userObj: PendingUser) => {
     setPendingLoginUser({ ...userObj, email: userEmail });
     setSendingCode(true);
     try {
@@ -222,7 +228,7 @@ const Login = () => {
       const data = await res.json();
       if (res.ok) {
         toast.success("MFA Verified Successfully!");
-        router.push(`/Student/${pendingLoginUser.id}/Dashboard`);
+        router.push(`/Student/${pendingLoginUser?.id}/Dashboard`);
       } else {
         toast.error(data.message || "Invalid or expired MFA code.");
       }
@@ -305,8 +311,8 @@ const Login = () => {
                   <div className="flex items-center justify-between text-xs text-white/70">
                     <button
                       type="button"
-                      disabled={sendingCode}
-                      onClick={() => triggerMfaCode(pendingLoginUser?.email || formData.email, pendingLoginUser)}
+                      disabled={sendingCode || !pendingLoginUser}
+                      onClick={() => pendingLoginUser && triggerMfaCode(pendingLoginUser.email || formData.email, pendingLoginUser)}
                       className="hover:text-white underline cursor-pointer disabled:opacity-50"
                     >
                       {sendingCode ? "Sending..." : "Resend Code"}

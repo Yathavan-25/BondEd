@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, } from 'firebase/auth';
-import { auth } from '@/config/firebase'; // Ensure this matches your firebase export
+import { auth } from '@/lib/firebase'; // Ensure this matches your firebase export
 import { Loader2 } from 'lucide-react';
 
 const publicPaths = [
@@ -25,7 +25,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebase) => {
-      
+
       const isPublicPath = publicPaths.includes(pathname);
       const isOnboarding = pathname.startsWith('/OnBoardingFlow');
 

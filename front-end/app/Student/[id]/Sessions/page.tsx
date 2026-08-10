@@ -76,7 +76,7 @@ export default function SessionsPage() {
           }
           setLoading(false);
         });
-      } catch {
+      } catch (err) {
         console.error(err);
         setLoading(false);
       }
@@ -462,7 +462,7 @@ function CreateSessionModal({
           const data = await friendsRes.json();
           setFriends(Array.isArray(data) ? data : []);
         }
-      } catch {
+      } catch (err) {
         console.error(err);
       } finally {
         setTopicsLoading(false);
