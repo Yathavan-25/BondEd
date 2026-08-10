@@ -41,50 +41,63 @@ export const sendMfaCode = async (req: Request, res: Response) => {
                       <head>
                         <meta charset="UTF-8" />
                         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                        <meta name="color-scheme" content="light" />
+                        <meta name="supported-color-schemes" content="light" />
                         <title>BondEd 2FA Verification</title>
+                        <style>
+                          :root { color-scheme: light; }
+                        </style>
                       </head>
-                      <body style="margin:0;padding:0;background-color:#0f0f1a;font-family:'Segoe UI',Arial,sans-serif;">
-                        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f1a;padding:40px 20px;">
+                      <body style="margin:0;padding:0;background-color:#f0f0f8;font-family:'Segoe UI',Arial,sans-serif;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f0f8;padding:40px 20px;">
                           <tr>
                             <td align="center">
-                              <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+                              <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(109,40,217,0.15);">
 
-                                <!-- Header -->
+                                <!-- Header: purple gradient — immune to dark mode inversion -->
                                 <tr>
                                   <td style="background:linear-gradient(135deg,#6d28d9 0%,#7c3aed 50%,#4f46e5 100%);padding:36px 40px 28px;text-align:center;">
-                                    <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 20px;margin-bottom:16px;">
-                                      <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:1px;">Bond<span style="color:#c4b5fd;">Ed</span></span>
+                                    <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:12px;padding:10px 22px;margin-bottom:16px;">
+                                      <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:1px;">Bond<span style="color:#ddd6fe;">Ed</span></span>
                                     </div>
                                     <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">Two-Factor Authentication</h1>
                                     <p style="margin:8px 0 0;color:#ddd6fe;font-size:14px;">Security Verification Code</p>
                                   </td>
                                 </tr>
 
-                                <!-- Body -->
+                                <!-- Body: white background — safe in all email clients & dark modes -->
                                 <tr>
-                                  <td style="background:#1a1a2e;padding:40px;">
+                                  <td style="background:#ffffff;padding:36px 40px;">
 
-                                    <p style="margin:0 0 8px;color:#a5b4fc;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Your verification code</p>
-                                    <p style="margin:0 0 28px;color:#c4c4d4;font-size:15px;line-height:1.6;">
-                                      Use the code below to complete your sign-in to BondEd. This code is valid for <strong style="color:#a78bfa;">10 minutes</strong>.
+                                    <p style="margin:0 0 6px;color:#6d28d9;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Your verification code</p>
+                                    <p style="margin:0 0 28px;color:#374151;font-size:15px;line-height:1.6;">
+                                      Use the code below to complete your sign-in to BondEd. This code is valid for <strong style="color:#6d28d9;">10 minutes</strong>.
                                     </p>
 
-                                    <!-- OTP Box -->
-                                    <div style="background:linear-gradient(135deg,#1e1b4b,#1a1a2e);border:2px solid #6d28d9;border-radius:14px;padding:28px 20px;text-align:center;margin-bottom:28px;">
-                                      <p style="margin:0 0 10px;color:#8b8ba7;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;">One-Time Passcode</p>
-                                      <div style="letter-spacing:16px;font-size:42px;font-weight:800;color:#ffffff;font-family:'Courier New',monospace;text-indent:16px;">${code}</div>
-                                      <p style="margin:10px 0 0;color:#6d6d85;font-size:11px;">Expires in 10 minutes</p>
-                                    </div>
+                                    <!-- OTP Box: white bg, dark code — always readable -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                                      <tr>
+                                        <td style="background:#f5f3ff;border:2px solid #7c3aed;border-radius:14px;padding:28px 20px;text-align:center;">
+                                          <p style="margin:0 0 12px;color:#6d28d9;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;">One-Time Passcode</p>
+                                          <p style="margin:0;letter-spacing:14px;font-size:46px;font-weight:800;color:#3b0764;font-family:'Courier New',Courier,monospace;text-indent:14px;">${code}</p>
+                                          <p style="margin:12px 0 0;color:#7c3aed;font-size:11px;font-weight:600;">Expires in 10 minutes</p>
+                                        </td>
+                                      </tr>
+                                    </table>
 
                                     <!-- Warning -->
-                                    <div style="background:#2d1b1b;border-left:4px solid #f87171;border-radius:8px;padding:16px 18px;margin-bottom:28px;">
-                                      <p style="margin:0;color:#fca5a5;font-size:13px;line-height:1.6;">
-                                        ⚠️ <strong>Did not request this?</strong><br/>
-                                        If you didn't try to sign in, your account may be at risk. Please change your password immediately and contact support.
-                                      </p>
-                                    </div>
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                                      <tr>
+                                        <td style="background:#fff5f5;border-left:4px solid #ef4444;border-radius:8px;padding:16px 18px;">
+                                          <p style="margin:0;color:#991b1b;font-size:13px;line-height:1.6;">
+                                            ⚠️ <strong>Did not request this?</strong><br/>
+                                            If you didn't try to sign in, your account may be at risk. Please change your password immediately and contact support.
+                                          </p>
+                                        </td>
+                                      </tr>
+                                    </table>
 
-                                    <p style="margin:0;color:#6d6d85;font-size:13px;line-height:1.6;text-align:center;">
+                                    <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;text-align:center;">
                                       Do not share this code with anyone.<br/>BondEd will never ask for your code via phone or email.
                                     </p>
                                   </td>
@@ -92,9 +105,9 @@ export const sendMfaCode = async (req: Request, res: Response) => {
 
                                 <!-- Footer -->
                                 <tr>
-                                  <td style="background:#111120;padding:24px 40px;text-align:center;border-top:1px solid #2a2a40;">
-                                    <p style="margin:0 0 6px;color:#4a4a6a;font-size:12px;">This is an automated message from BondEd Security.</p>
-                                    <p style="margin:0;color:#4a4a6a;font-size:12px;">© ${new Date().getFullYear()} BondEd Collaborative Learning Platform. All rights reserved.</p>
+                                  <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
+                                    <p style="margin:0 0 4px;color:#9ca3af;font-size:12px;">This is an automated message from BondEd Security.</p>
+                                    <p style="margin:0;color:#9ca3af;font-size:12px;">© ${new Date().getFullYear()} BondEd Collaborative Learning Platform. All rights reserved.</p>
                                   </td>
                                 </tr>
 
