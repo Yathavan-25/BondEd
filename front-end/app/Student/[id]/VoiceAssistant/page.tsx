@@ -41,7 +41,7 @@ export default function VoiceAssistantPage() {
 
   const vapiRef = useRef<any>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
-  const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const transcriptContainerRef = useRef<HTMLDivElement>(null);
   const sessionStartRef = useRef<Date | null>(null);
   const finalTopicRef = useRef<string>("");
   const currentCallIdRef = useRef<string | null>(null);
@@ -62,7 +62,9 @@ export default function VoiceAssistantPage() {
   }, [transcripts]);
 
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (transcriptContainerRef.current) {
+      transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight;
+    }
   }, [transcripts, liveMessage]);
 
   useEffect(() => {
@@ -219,8 +221,7 @@ export default function VoiceAssistantPage() {
 
     if (leftSec <= 0) {
       setTimeWarning("Out of credits! Ending session.");
-      // Hard stop immediately
-      finalizeSession({}, "Session forcefully ended due to out of minutes.");
+      stopSession();
     } else if (leftSec <= 120) {
       setTimeWarning(`Only ${Math.ceil(leftSec / 60)} minute(s) left! Session will end automatically.`);
     } else {
@@ -431,7 +432,7 @@ export default function VoiceAssistantPage() {
             <h2 className="relative text-lg font-bold text-gray-900 tracking-wide mb-6">Live Transcript</h2>
             <div className="w-full h-px bg-gray-100 my-2" />
             <div className="relative flex-1 flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+              <div ref={transcriptContainerRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
                 <AnimatePresence mode="popLayout">
                   {transcripts.length === 0 ? (
                     <motion.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-sm text-gray-400 italic">Select a topic and press the mic to start studying.</motion.p>
