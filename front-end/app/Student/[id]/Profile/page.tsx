@@ -7,22 +7,8 @@ import { auth } from "@/lib/firebase";
 import { Loader2, LogOut, Save, User, BookOpen, Target, Brain, Zap, Mic, CheckCircle2, Shield, Key, Camera, Lock, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 
-const DEEPGRAM_VOICES = [
-  { id: "aura-asteria-en", name: "Asteria", gender: "Female", description: "Warm, clear, and encouraging" },
-  { id: "aura-luna-en", name: "Luna", gender: "Female", description: "Calm, soft, and soothing" },
-  { id: "aura-stella-en", name: "Stella", gender: "Female", description: "Energetic and expressive" },
-  { id: "aura-athena-en", name: "Athena", gender: "Female", description: "Authoritative and professional" },
-  { id: "aura-hera-en", name: "Hera", gender: "Female", description: "Balanced and natural" },
-  { id: "aura-orion-en", name: "Orion", gender: "Male", description: "Clear, confident, and articulate" },
-  { id: "aura-arcane-en", name: "Arcane", gender: "Male", description: "Smooth and engaging" },
-  { id: "aura-perseus-en", name: "Perseus", gender: "Male", description: "Friendly and approachable" },
-  { id: "aura-helios-en", name: "Helios", gender: "Male", description: "Energetic and vibrant" },
-  { id: "aura-zeus-en", name: "Zeus", gender: "Male", description: "Deep and authoritative" },
-];
-
 const TABS = [
   { id: "learning", label: "Learning", icon: Target },
-  { id: "voice", label: "Voice", icon: Mic },
   { id: "security", label: "Security", icon: Shield },
 ] as const;
 
@@ -34,8 +20,7 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [voiceFilter, setVoiceFilter] = useState<"All" | "Female" | "Male">("All");
-  const [activeTab, setActiveTab] = useState<"learning" | "voice" | "security">("learning");
+  const [activeTab, setActiveTab] = useState<"learning" | "security">("learning");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [profileData, setProfileData] = useState<any>({
@@ -43,7 +28,6 @@ export default function ProfilePage() {
     topics: "",
     subjects: "",
     learningStyle: "Adaptive",
-    preferredVoice: "aura-asteria-en",
     avatarUrl: "",
     mfaEnabled: false
   });
@@ -424,72 +408,7 @@ export default function ProfilePage() {
               </section>
             )}
 
-            {/* VOICE */}
-            {activeTab === "voice" && (
-              <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                  <div>
-                    <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
-                      <Mic className="h-4 w-4 text-[#9C2FDF]" /> AI Voice Assistant Persona
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Select a Deepgram voice to use during your AI study sessions.
-                    </p>
-                  </div>
-                  <div className="flex w-fit shrink-0 items-center gap-1 rounded-xl bg-gray-100 p-1">
-                    {(["All", "Female", "Male"] as const).map((gender) => (
-                      <button
-                        key={gender}
-                        type="button"
-                        onClick={() => setVoiceFilter(gender)}
-                        className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${voiceFilter === gender
-                            ? "bg-white text-gray-900 shadow-sm"
-                            : "text-gray-500 hover:text-gray-900"
-                          }`}
-                      >
-                        {gender}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {DEEPGRAM_VOICES.filter((v) => voiceFilter === "All" || v.gender === voiceFilter).map((v) => {
-                    const isSelected = profileData.preferredVoice === v.id;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setProfileData({ ...profileData, preferredVoice: v.id })}
-                        className={`flex items-start justify-between gap-3 rounded-2xl border p-4 text-left transition-all ${isSelected
-                            ? "border-[#9C2FDF] bg-purple-50/60 ring-2 ring-[#9C2FDF]/20"
-                            : "border-gray-200 bg-gray-50/60 hover:border-gray-300 hover:bg-white"
-                          }`}
-                      >
-                        <span className="min-w-0 space-y-1">
-                          <span className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">{v.name}</span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${v.gender === "Female"
-                                  ? "bg-pink-100 text-pink-700"
-                                  : "bg-blue-100 text-blue-700"
-                                }`}
-                            >
-                              {v.gender}
-                            </span>
-                          </span>
-                          <span className="block text-xs leading-relaxed text-gray-500">{v.description}</span>
-                          <span className="block truncate font-mono text-[10px] text-gray-400">
-                            Deepgram • {v.id}
-                          </span>
-                        </span>
-                        {isSelected && <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#9C2FDF]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
 
             {/* SECURITY */}
             {activeTab === "security" && (
