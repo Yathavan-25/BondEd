@@ -247,7 +247,6 @@ export default function VoiceAssistantPage() {
       hasFinalizedRef.current = false;
 
       try {
-        const voiceId = profile?.preferredVoice || "aura-asteria-en";
         const variableValues = {
           learningStyle: Array.isArray(profile?.learningStyle) ? profile.learningStyle.join(", ") : (profile?.learningStyle || "Adaptive"),
           currentTopic: finalTopic,
@@ -255,21 +254,7 @@ export default function VoiceAssistantPage() {
           pastSessionMemory: memory || "No previous session."
         };
 
-        let call;
-        try {
-          // Attempt 1: Try starting with the student's preferred voice from profile
-          call = await vapiRef.current.start(ASSISTANT_ID, {
-            variableValues,
-            voice: {
-              provider: "deepgram",
-              voiceId: voiceId
-            }
-          });
-        } catch (voiceErr) {
-          console.warn("Vapi custom voice override failed, falling back to default voice:", voiceErr);
-          // Attempt 2: Fallback to default assistant configuration if custom voice override fails
-          call = await vapiRef.current.start(ASSISTANT_ID, { variableValues });
-        }
+        const call = await vapiRef.current.start(ASSISTANT_ID, { variableValues });
 
         if (call && call.id) {
           setCurrentCallId(call.id);
