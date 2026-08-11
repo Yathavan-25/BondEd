@@ -122,7 +122,10 @@ const Login = () => {
         }
 
         toast.success("Login Successful");
-        router.push(`/Student/${data.user.id}/Dashboard`)
+        const destination = data.user.hasCompletedOnboarding
+          ? `/Student/${data.user.id}/Dashboard`
+          : `/OnBoardingFlow/${data.user.id}`;
+        router.push(destination);
       }
 
     } catch (error) {
@@ -176,7 +179,10 @@ const Login = () => {
         }
 
         toast.success("Login Successful")
-        router.push(`/Student/${data.user.id}/Dashboard`)
+        const destination = data.user.hasCompletedOnboarding
+          ? `/Student/${data.user.id}/Dashboard`
+          : `/OnBoardingFlow/${data.user.id}`;
+        router.push(destination);
       }
     } catch (error) {
       console.log("Login Error", error);
