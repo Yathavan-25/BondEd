@@ -457,7 +457,6 @@ export default function VoiceAssistantPage() {
                     </div>
                   </div>
                 )}
-                <div ref={transcriptEndRef} />
               </div>
             </div>
           </div>
