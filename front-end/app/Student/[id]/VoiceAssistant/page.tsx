@@ -254,11 +254,9 @@ export default function VoiceAssistantPage() {
             academicGoals: profile?.academicGoals || "Improve understanding.",
             pastSessionMemory: memory || "No previous session."
           },
-          assistantOverrides: {
-            voice: {
-              provider: "deepgram",
-              voiceId: voiceId
-            }
+          voice: {
+            provider: "deepgram",
+            voiceId: voiceId
           }
         });
 

@@ -275,7 +275,7 @@ export default function OnboardingFlow() {
                 feedback: profileData.knowledgeFeedback || "Pending assessment",
                 topicBreakdown: topicAssessments
               },
-              topics: extractedTopics,
+              topics: selectedTopics.length > 0 ? selectedTopics : extractedTopics,
               subjects: finalSubjects,
               availability: {
                 times: Array.isArray(profileData.availabilityPref)
