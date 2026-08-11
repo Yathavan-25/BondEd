@@ -1,56 +1,110 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useInView } from 'framer-motion';
 
-// 1. DYNAMIC IMPORT: We use the standard react-spline, but strictly disable Server-Side Rendering (SSR)
-// This prevents Next.js from crashing when trying to parse 3D WebGL on the server!
 const Spline = dynamic(() => import('@splinetool/react-spline'), { 
   ssr: false,
-  // Optional: A blank div that holds the space while the 3D scene loads in the browser
   loading: () => <div className="w-full h-full bg-transparent" /> 
 });
 
+function checkWebGLSupport(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    return !!(gl && gl instanceof WebGLRenderingContext);
+  } catch {
+    return false;
+  }
+}
+
+class WebGLErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any) {
+    console.warn("WebGL unavailable or threw error, switching to 3D video fallback:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
+function VideoFallback() {
+  return (
+    <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="w-full h-full object-cover opacity-80"
+      >
+        <source src="https://assets.mixkit.co/videos/preview/mixkit-abstract-purple-and-blue-mesh-40871-large.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 pointer-events-none" />
+    </div>
+  );
+}
+
 export default function SplineScene() {
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Use a Ref to hold the Spline engine to avoid re-render loops
-  const splineApp = useRef<any>(null); 
-  
+  const splineApp = useRef<any>(null);
+  const [isSupported, setIsSupported] = useState<boolean>(true);
   const isInView = useInView(containerRef, { margin: "0px" });
 
   useEffect(() => {
-    if (!splineApp.current) return;
+    setIsSupported(checkWebGLSupport());
+  }, []);
 
+  useEffect(() => {
+    if (!splineApp.current) return;
     if (isInView) {
-      splineApp.current.play();
+      splineApp.current.play?.();
     } else {
-      splineApp.current.stop(); // Frees up GPU immediately when scrolled away!
+      splineApp.current.stop?.();
     }
   }, [isInView]);
 
   const handleLoad = (app: any) => {
     splineApp.current = app;
-    
-    // Safety check: if they already scrolled down by the time it loads, pause it
     if (!isInView) {
-      app.stop();
+      app.stop?.();
     }
   };
+
+  if (!isSupported) {
+    return <VideoFallback />;
+  }
 
   return (
     <div 
       ref={containerRef} 
       className="w-full h-full [&>canvas]:w-full! [&>canvas]:h-full! [&_canvas]:w-full! [&_canvas]:h-full!"
     >
-      {/* Notice we are using the dynamically imported Spline here */}
-      <Spline
-        scene="https://prod.spline.design/yyrnSXM5GuJDvtAR/scene.splinecode"
-        style={{ width: '100%', height: '100%' }}
-        onLoad={handleLoad} 
-      />
+      <WebGLErrorBoundary fallback={<VideoFallback />}>
+        <Spline
+          scene="https://prod.spline.design/yyrnSXM5GuJDvtAR/scene.splinecode"
+          style={{ width: '100%', height: '100%' }}
+          onLoad={handleLoad} 
+        />
+      </WebGLErrorBoundary>
     </div>
   );
 }
