@@ -19,15 +19,15 @@ interface TopicAssessment { topic: string; subject: string; score: number; summa
 interface MatchData {
   id: string; name: string; initials: string; match: number;
   lookingForTopic?: { name: string; score: number; subject: string }[]; topics?: string[]; lookingForSubject?: string[]; subjects?: string[];
-  availability: string; avatarBg: string; learningStyle?: string[];
+  availability: string; avatarBg: string; avatarUrl?: string | null; learningStyle?: string[];
   personality?: { openness?: number; conscientiousness?: number; extraversion?: number; agreeableness?: number; };
   knowledgeLevel?: { score?: number; feedback?: string; topicBreakdown?: TopicAssessment[]; };
 }
-interface RequestData { id: string; name: string; initials: string; avatarBg: string; subject: string; sentAgo: string; status?: string; receiverId?: string; senderId?: string; message?: string; }
+interface RequestData { id: string; name: string; initials: string; avatarBg: string; avatarUrl?: string | null; subject: string; sentAgo: string; status?: string; receiverId?: string; senderId?: string; message?: string; }
 
 // FIX: Added the rich profile fields to the MessageData so they don't get lost!
 interface MessageData {
-  id: string; name: string; initials: string; avatarBg: string; preview: string; time: string; unread: number; partnerId: string; isOnline?: boolean;
+  id: string; name: string; initials: string; avatarBg: string; avatarUrl?: string | null; preview: string; time: string; unread: number; partnerId: string; isOnline?: boolean;
   lookingForTopic?: { name: string; score: number; subject: string }[];
   learningStyle?: string[];
   personality?: any;
@@ -130,7 +130,15 @@ function MatchRadial({ value }: { value: number }) {
   );
 }
 
-function Avatar({ initials, bg }: { initials: string; bg: string }) { return (<div className={`w-11 h-11 rounded-[12px] bg-linear-to-br ${bg} flex items-center justify-center text-white font-bold text-sm shadow-inner shrink-0`}>{initials}</div>); }
+function Avatar({ initials, bg, avatarUrl }: { initials: string; bg: string; avatarUrl?: string | null }) {
+  if (avatarUrl) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+      <img src={avatarUrl} alt={initials} className="w-11 h-11 rounded-[12px] object-cover shrink-0 shadow-inner" />
+    );
+  }
+  return (<div className={`w-11 h-11 rounded-[12px] bg-linear-to-br ${bg} flex items-center justify-center text-white font-bold text-sm shadow-inner shrink-0`}>{initials}</div>);
+}
 function ListShell({ children }: { children: React.ReactNode }) { return <div className="bg-white rounded-[22px] border border-[#00000010] shadow-sm divide-y divide-gray-100 overflow-hidden">{children}</div>; }
 function Row({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) { return (<motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35, delay, ease: [0.22, 1, 0.36, 1] }} className="flex items-center gap-4 p-4 md:p-5 hover:bg-gray-50/70 transition-colors">{children}</motion.div>); }
 
@@ -247,6 +255,7 @@ export default function FindPartnersPage() {
           name: msgPartner.name,
           initials: msgPartner.initials,
           avatarBg: msgPartner.avatarBg,
+          avatarUrl: msgPartner.avatarUrl,
           match: 100,
           availability: msgPartner.availability || "Flexible",
           lookingForTopic: msgPartner.lookingForTopic || [],
@@ -534,7 +543,7 @@ export default function FindPartnersPage() {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-5">
                   <div className="flex items-center gap-3">
-                    <Avatar initials={connectModalPartner.initials} bg={connectModalPartner.avatarBg} />
+                    <Avatar initials={connectModalPartner.initials} bg={connectModalPartner.avatarBg} avatarUrl={connectModalPartner.avatarUrl} />
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">{connectModalPartner.name}</h3>
                       <p className="text-xs text-gray-500 font-semibold">{connectModalPartner.lookingForSubject?.[0] || "General Studies"}</p>
@@ -633,7 +642,7 @@ export default function FindPartnersPage() {
                 {/* Slide-over Header */}
                 <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-white shadow-sm z-10">
                   <div className="flex items-center gap-3">
-                    <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} />
+                    <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} avatarUrl={activePartner.avatarUrl} />
                     <div>
                       <h2 className="text-md font-bold text-gray-900 leading-tight">{activePartner.name}</h2>
                       <p className="text-xs font-semibold flex items-center gap-1 mt-0.5">
@@ -688,7 +697,7 @@ export default function FindPartnersPage() {
                         const isMine = m.senderId === studentId;
                         return (
                           <div key={m.id} className={`flex items-end gap-2 max-w-[85%] ${isMine ? "self-end flex-row-reverse" : ""}`}>
-                            {!isMine && <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} />}
+                            {!isMine && <Avatar initials={activePartner.initials} bg={activePartner.avatarBg} avatarUrl={activePartner.avatarUrl} />}
                             <div className={`p-3 text-[15px] shadow-sm ${isMine ? "bg-violet-600 text-white rounded-2xl rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm"}`}>
                               {m.content}
                             </div>
@@ -933,7 +942,7 @@ function DiscoverTab({ matches, loading, onOpenConnectModal, onOpenChat }: { mat
               <motion.div key={partner.id} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: idx * 0.05, ease: [0.22, 1, 0.36, 1] }} whileHover={{ y: -4 }} className="relative bg-white rounded-[22px] border border-[#00000010] p-6 shadow-sm hover:shadow-xl hover:border-[#4f55ee]/20 transition-all duration-500 flex flex-col overflow-hidden">
                 <div className="relative flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <Avatar initials={partner.initials} bg={partner.avatarBg} />
+                    <Avatar initials={partner.initials} bg={partner.avatarBg} avatarUrl={partner.avatarUrl} />
                     <div>
                       <h3 className="font-bold text-gray-900 leading-tight">{partner.name}</h3>
                       <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5 truncate max-w-35">{partner.lookingForSubject?.[0] || "General Studies"}</p>
@@ -1008,7 +1017,7 @@ function SentTab({ requests, loading, onCancel }: { requests: RequestData[], loa
     <ListShell>
       {requests.map((r, i) => (
         <Row key={r.id} delay={i * 0.05}>
-          <Avatar initials={r.initials} bg={r.avatarBg} />
+          <Avatar initials={r.initials} bg={r.avatarBg} avatarUrl={r.avatarUrl} />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 truncate">{r.name}</p>
             <p className="text-sm text-gray-500 truncate">{r.subject}</p>
@@ -1036,7 +1045,7 @@ function ReceivedTab({ requests, loading, onRespond }: { requests: RequestData[]
     <ListShell>
       {requests.map((r, i) => (
         <Row key={r.id} delay={i * 0.05}>
-          <Avatar initials={r.initials} bg={r.avatarBg} />
+          <Avatar initials={r.initials} bg={r.avatarBg} avatarUrl={r.avatarUrl} />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 truncate">{r.name}</p>
             <p className="text-sm text-gray-500 truncate">{r.subject}</p>
@@ -1065,7 +1074,7 @@ function MessagesTab({ messages, loading, onOpenChat }: { messages: MessageData[
       {messages.map((m, i) => (
         <Row key={m.id} delay={i * 0.05}>
           <div className="relative">
-            <Avatar initials={m.initials} bg={m.avatarBg} />
+            <Avatar initials={m.initials} bg={m.avatarBg} avatarUrl={m.avatarUrl} />
             {m.isOnline && <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>}
           </div>
           <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onOpenChat(m.partnerId)}>

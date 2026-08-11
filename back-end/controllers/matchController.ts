@@ -145,6 +145,7 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
                 lookingForSubject : partner.subjects,
                 availability : partnerAvail.join(", ") || "Flexible",
                 avatarBg: "from-[#1363CB] to-[#9C2FDF]",
+                avatarUrl: partner.avatarUrl || null,
                 learningStyle: partner.learningStyle,
                 personality: partner.personality, // The JSON object
                 knowledgeLevel: partner.knowledgeLevel, // The JSON object containing topicBreakdown

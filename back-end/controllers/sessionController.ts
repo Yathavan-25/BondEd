@@ -471,7 +471,7 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
                     { participants: { some: { id: studentId } } }
                 ]
             },
-            include: { host: { include: { profile: true } }, participants: true },
+            include: { host: { include: { profile: true } }, participants: { include: { profile: true } } },
             orderBy: { startTime: 'desc' }
         });
 
@@ -498,9 +498,20 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
                 p.firstName ? `${p.firstName.charAt(0)}${p.lastName?.charAt(0) || ''}`.toUpperCase() : p.email.substring(0, 2).toUpperCase()
             );
 
+            const participantDetails = session.participants.map(p => ({
+                initials: p.firstName ? `${p.firstName.charAt(0)}${p.lastName?.charAt(0) || ''}`.toUpperCase() : p.email.substring(0, 2).toUpperCase(),
+                avatarUrl: p.profile?.avatarUrl || null
+            }));
+
             if (session.hostId !== studentId) {
                 const hostInitial = session.host.firstName ? `${session.host.firstName.charAt(0)}${session.host.lastName?.charAt(0) || ''}`.toUpperCase() : session.host.email.substring(0, 2).toUpperCase();
                 if (!avatars.includes(hostInitial)) avatars.push(hostInitial);
+                if (!participantDetails.some(pd => pd.initials === hostInitial)) {
+                    participantDetails.push({
+                        initials: hostInitial,
+                        avatarUrl: session.host.profile?.avatarUrl || null
+                    });
+                }
             }
 
             const safeSession = session as any;
@@ -521,6 +532,7 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
                 status: uiStatus,
                 color: isAISession ? "from-[#9C2FDF] to-purple-600" : "from-[#1363CB] to-[#4f55ee]",
                 avatars: avatars.length > 0 ? avatars : ["ST"],
+                participantDetails: participantDetails,
                 host: `${session.host.firstName || ''} ${session.host.lastName || ''}`.trim(),
                 startsInMin: startsInMin,
                 isAISession: isAISession

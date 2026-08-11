@@ -380,7 +380,8 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
           subject: primaryTag,
           scoreVal: totalCalculatedPct,
           match: `${totalCalculatedPct}% Match`,
-          gradient
+          gradient,
+          avatarUrl: p.avatarUrl || null
         };
       });
 

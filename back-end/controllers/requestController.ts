@@ -29,6 +29,7 @@ export const getSentRequests = async (req: Request, res: Response): Promise<void
             name: `${r.receiver.user.firstName} ${r.receiver.user.lastName || ''}`.trim(),
             initials: `${r.receiver.user.firstName?.[0] || ''}${r.receiver.user.lastName?.[0] || ''}`.toUpperCase(),
             avatarBg: "from-blue-400 to-indigo-500",
+            avatarUrl: r.receiver.avatarUrl || null,
             subject: r.message || r.topic || "Study request",
             sentAgo: formatTimeAgo(r.createdAt),
             status: r.status,
@@ -52,6 +53,7 @@ export const getReceivedRequests = async (req: Request, res: Response): Promise<
             name: `${r.sender.user.firstName} ${r.sender.user.lastName || ''}`.trim(),
             initials: `${r.sender.user.firstName?.[0] || ''}${r.sender.user.lastName?.[0] || ''}`.toUpperCase(),
             avatarBg: "from-emerald-400 to-teal-500",
+            avatarUrl: r.sender.avatarUrl || null,
             subject: `Wants to study: ${r.topic || 'General'}`,
             sentAgo: formatTimeAgo(r.createdAt),
             senderId: r.senderId,
@@ -151,6 +153,7 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
                 name: `${friendUser.firstName} ${friendUser.lastName || ''}`.trim(),
                 initials: `${friendUser.firstName?.[0] || ''}${friendUser.lastName?.[0] || ''}`.toUpperCase(),
                 avatarBg: "from-[#1363CB] to-[#9C2FDF]", // Unified branding
+                avatarUrl: friendProfile.avatarUrl || null,
                 preview: lastMessage ? lastMessage.content : "You are now connected!",
                 time: lastMessage ? formatTimeAgo(lastMessage.createdAt) : formatTimeAgo(c.createdAt),
                 unread: unreadCount,
@@ -191,6 +194,7 @@ export const getFriendsList = async (req: Request, res: Response): Promise<void>
                 name: `${friendUser.firstName} ${friendUser.lastName || ''}`.trim(),
                 email: friendUser.email,
                 avatar: `${friendUser.firstName?.[0] || ''}${friendUser.lastName?.[0] || ''}`.toUpperCase(),
+                avatarUrl: friendProfile.avatarUrl || null,
             };
         });
 

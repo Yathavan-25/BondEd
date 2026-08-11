@@ -27,6 +27,7 @@ type Session = {
   color: string;
   ring: string;
   avatars: string[];
+  participantDetails?: { initials: string; avatarUrl: string | null }[];
   host: string;
   startsInMin?: number;
   progress?: number;
@@ -39,6 +40,7 @@ type Friend = {
   name: string;
   email: string;
   avatar?: string;
+  avatarUrl?: string | null;
 };
 
 const TABS = [
@@ -366,14 +368,30 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
 
         <div className="flex items-center gap-3 mt-4 md:mt-0">
           <div className="flex -space-x-2">
-            {session.avatars.map((av, i) => (
-              <div
-                key={i}
-                className={`w-8 h-8 rounded-full bg-gradient-to-br ${session.color} border-2 border-white flex items-center justify-center text-white text-xs font-bold`}
-              >
-                {av}
-              </div>
-            ))}
+            {session.participantDetails && session.participantDetails.length > 0 ? (
+              session.participantDetails.map((pd: any, i: number) => (
+                pd.avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+                  <img key={i} src={pd.avatarUrl} alt={pd.initials} className="w-8 h-8 rounded-full border-2 border-white object-cover -ml-2 first:ml-0" />
+                ) : (
+                  <div
+                    key={i}
+                    className={`w-8 h-8 rounded-full bg-gradient-to-br ${session.color} border-2 border-white flex items-center justify-center text-white text-xs font-bold -ml-2 first:ml-0`}
+                  >
+                    {pd.initials}
+                  </div>
+                )
+              ))
+            ) : (
+              session.avatars.map((av: string, i: number) => (
+                <div
+                  key={i}
+                  className={`w-8 h-8 rounded-full bg-gradient-to-br ${session.color} border-2 border-white flex items-center justify-center text-white text-xs font-bold -ml-2 first:ml-0`}
+                >
+                  {av}
+                </div>
+              ))
+            )}
           </div>
           {renderActionButton()}
         </div>
@@ -741,9 +759,14 @@ function CreateSessionModal({
                               selected ? "bg-[#1363CB]/5" : "hover:bg-gray-50"
                             }`}
                           >
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1363CB] to-purple-500 flex items-center justify-center text-white text-sm font-bold">
-                              {f.avatar || f.name.charAt(0).toUpperCase()}
-                            </div>
+                            {f.avatarUrl ? (
+                              /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+                              <img src={f.avatarUrl} alt={f.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1363CB] to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                                {f.avatar || f.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-semibold text-gray-900 truncate">{f.name}</div>
                               <div className="text-xs text-gray-500 truncate">{f.email}</div>

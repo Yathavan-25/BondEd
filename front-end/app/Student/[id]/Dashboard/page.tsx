@@ -283,7 +283,7 @@ export default function DashboardPage() {
           {data.suggestedPartners.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {data.suggestedPartners.map((partner: any) => (
-                <PartnerCard key={partner.id} initials={partner.initials} name={partner.name} subject={partner.subject} match={partner.match} gradient={partner.gradient} />
+                <PartnerCard key={partner.id} initials={partner.initials} name={partner.name} subject={partner.subject} match={partner.match} gradient={partner.gradient} avatarUrl={partner.avatarUrl} />
               ))}
             </div>
           ) : (
@@ -346,13 +346,18 @@ function SessionCard({ dotColor, title, avatars, time, badge, badgeStyle }: any)
   );
 }
 
-function PartnerCard({ initials, name, subject, match, gradient }: any) {
+function PartnerCard({ initials, name, subject, match, gradient, avatarUrl }: any) {
   return (
     <div className="flex items-center justify-between p-3.5 rounded-[16px] border border-gray-100 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`w-10 h-10 rounded-[12px] bg-linear-to-br ${gradient} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
-          {initials}
-        </div>
+        {avatarUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+          <img src={avatarUrl} alt={name} className="w-10 h-10 rounded-[12px] object-cover shrink-0" />
+        ) : (
+          <div className={`w-10 h-10 rounded-[12px] bg-linear-to-br ${gradient} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
+            {initials}
+          </div>
+        )}
         <div className="truncate">
           <p className="text-sm font-semibold text-gray-900 truncate capitalize">{name}</p>
           <p className="text-xs text-gray-400 truncate">{subject}</p>
