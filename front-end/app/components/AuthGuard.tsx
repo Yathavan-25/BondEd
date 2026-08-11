@@ -65,7 +65,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             if (isOnboarding) {
               router.replace(`/Student/${firebase.uid}/Dashboard`);
             } else if (pathname === '/Login' || pathname === '/Register') {
-              router.replace(`/Student/${firebase.uid}/Dashboard`);
+              // Don't redirect if an MFA step is in progress on the Login page
+              const mfaPending = typeof window !== 'undefined' && sessionStorage.getItem('mfaPending') === 'true';
+              if (!mfaPending) {
+                router.replace(`/Student/${firebase.uid}/Dashboard`);
+              } else {
+                setLoading(false);
+              }
             } else {
               setLoading(false);
             }

@@ -56,6 +56,8 @@ const Login = () => {
   const triggerMfaCode = async (userEmail: string, userObj: PendingUser) => {
     setPendingLoginUser({ ...userObj, email: userEmail });
     setSendingCode(true);
+    // Flag is already set by the caller before Firebase auth ran
+    sessionStorage.setItem('mfaPending', 'true');
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/auth/send-mfa-code`, {
         method: "POST",
@@ -78,12 +80,15 @@ const Login = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    // Set flag BEFORE the popup so onAuthStateChanged sees it and won't auto-redirect
+    sessionStorage.setItem('mfaPending', 'true');
     try {
       //Google Popup
       const result = await signInWithPopup(auth, googleProvider);
       const additionalInfo = getAdditionalUserInfo(result);
 
       if (additionalInfo?.isNewUser) {
+        sessionStorage.removeItem('mfaPending');
         await signOut(auth);
         toast.error("Account not found. Please sign up using your Google account to get started.");
         router.push("/Register");
@@ -117,10 +122,12 @@ const Login = () => {
           const pData = await profileRes.json();
           if (pData.profile?.mfaEnabled) {
             await triggerMfaCode(result.user.email || data.user.email, data.user);
-            return;
+            return; // keep mfaPending flag active until code is verified
           }
         }
 
+        // No MFA required — clear flag and proceed
+        sessionStorage.removeItem('mfaPending');
         toast.success("Login Successful");
         const destination = data.user.hasCompletedOnboarding
           ? `/Student/${data.user.id}/Dashboard`
@@ -129,6 +136,7 @@ const Login = () => {
       }
 
     } catch (error) {
+      sessionStorage.removeItem('mfaPending');
       console.error("Auth error ", error);
       toast.error("Login Failed");
     }
@@ -142,11 +150,14 @@ const Login = () => {
       return;
     }
 
+    // Set flag BEFORE sign-in so onAuthStateChanged sees it and won't auto-redirect
+    sessionStorage.setItem('mfaPending', 'true');
     try {
       const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
       const additionalInfo = getAdditionalUserInfo(userCredential);
 
       if (additionalInfo?.isNewUser) {
+        sessionStorage.removeItem('mfaPending');
         await signOut(auth);
         toast.error("Account not found. Please sign up first to get started.");
         router.push("/Register");
@@ -174,10 +185,12 @@ const Login = () => {
           const pData = await profileRes.json();
           if (pData.profile?.mfaEnabled) {
             await triggerMfaCode(formData.email, data.user);
-            return;
+            return; // keep mfaPending flag active until code is verified
           }
         }
 
+        // No MFA required — clear flag and proceed
+        sessionStorage.removeItem('mfaPending');
         toast.success("Login Successful")
         const destination = data.user.hasCompletedOnboarding
           ? `/Student/${data.user.id}/Dashboard`
@@ -185,6 +198,7 @@ const Login = () => {
         router.push(destination);
       }
     } catch (error) {
+      sessionStorage.removeItem('mfaPending');
       console.log("Login Error", error);
       toast.error("Login Failed")
     }
@@ -220,6 +234,7 @@ const Login = () => {
     const emailToVerify = pendingLoginUser?.email || formData.email;
     if (!emailToVerify) {
       toast.error("Session expired. Please log in again.");
+      sessionStorage.removeItem('mfaPending');
       setIsMfaStep(false);
       return;
     }
@@ -233,6 +248,7 @@ const Login = () => {
 
       const data = await res.json();
       if (res.ok) {
+        sessionStorage.removeItem('mfaPending');
         toast.success("MFA Verified Successfully!");
         router.push(`/Student/${pendingLoginUser?.id}/Dashboard`);
       } else {

@@ -211,6 +211,8 @@ export default function VoiceAssistantPage() {
       }
 
       if (toolName === "submitSessionUpdate" && toolArgs) {
+        // Cancel the call-end fallback timer — submitSessionUpdate arrived in time
+        if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
         finalizeSession(toolArgs, toolArgs.summary);
       } else if (toolName === "generateVisualAid" && toolArgs?.prompt) {
         handleGenerateVisualAid(toolArgs.prompt);
@@ -223,7 +225,13 @@ export default function VoiceAssistantPage() {
     });
     vapi.on("message", onMessage);
     vapi.on("call-end", () => {
-      if (!hasFinalizedRef.current) finalizeSession({}, undefined);
+      // Give the submitSessionUpdate tool-call message 3 seconds to arrive before
+      // falling back to empty data. Without this delay, call-end wins the race.
+      if (!hasFinalizedRef.current) {
+        fallbackTimerRef.current = setTimeout(() => {
+          if (!hasFinalizedRef.current) finalizeSession({}, undefined);
+        }, 3000);
+      }
     });
     vapi.on("error", (e: any) => {
       console.error("VAPI ERROR:", e);
