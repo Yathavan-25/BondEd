@@ -386,7 +386,8 @@ ${transcriptText}`;
                         const geminiJson: any = await geminiRes.json();
                         const rawText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text;
                         if (rawText) {
-                            const parsed = JSON.parse(rawText);
+                            const cleanedText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                            const parsed = JSON.parse(cleanedText);
                             safeData = { ...safeData, ...parsed };
                         }
                     }
