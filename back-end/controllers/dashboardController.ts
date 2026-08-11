@@ -51,21 +51,53 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
     const allSessions = Array.from(sessionMap.values());
     const completedSessions = allSessions.filter(s => s.status === "completed" || s.status === "Completed");
 
-    // 1. Calculate REAL total study hours from Voice Assistant & Collaborative completed sessions
-    const sessionHours = completedSessions.reduce((acc, s) => {
-      let durationHours = 0;
+    // Determine current calendar week bounds (Monday to Sunday)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+    const currentMonday = new Date(now);
+    currentMonday.setDate(now.getDate() + diffToMonday);
+    currentMonday.setHours(0, 0, 0, 0);
+
+    // 1. Calculate REAL study hours for ALL-TIME and THIS-WEEK
+    let totalMinsAllTime = 0;
+    let totalMinsThisWeek = 0;
+
+    completedSessions.forEach(s => {
+      let mins = 0;
       if (s.startTime && s.endTime) {
         const diffMs = new Date(s.endTime).getTime() - new Date(s.startTime).getTime();
-        durationHours = diffMs / (1000 * 60 * 60);
+        mins = Math.max(1, Math.round(diffMs / 60000));
+      } else {
+        mins = 30;
       }
-      return acc + Math.max(0, durationHours);
-    }, 0);
+      totalMinsAllTime += mins;
 
+      const sDate = s.startTime ? new Date(s.startTime) : null;
+      if (sDate && sDate >= currentMonday) {
+        totalMinsThisWeek += mins;
+      }
+    });
+
+    // Factor usage logs (vapi and daily minutes)
     const usageLogs = await prisma.usageLog.findMany({ where: { userId } });
-    const usageMins = usageLogs.reduce((acc, u) => acc + (u.usage || 0), 0);
-    const usageHours = usageMins / 60;
+    let usageMinsAllTime = 0;
+    let usageMinsThisWeek = 0;
 
-    const totalHours = Math.max(sessionHours, usageHours);
+    usageLogs.forEach(u => {
+      const uMins = Math.round(u.usage || 0);
+      usageMinsAllTime += uMins;
+      const uDate = new Date(u.createdAt);
+      if (uDate >= currentMonday) {
+        usageMinsThisWeek += uMins;
+      }
+    });
+
+    const finalMinsAllTime = Math.max(totalMinsAllTime, usageMinsAllTime);
+    const finalMinsThisWeek = Math.max(totalMinsThisWeek, usageMinsThisWeek);
+
+    const totalHours = Number((finalMinsAllTime / 60).toFixed(1));
+    const hoursThisWeek = Number((finalMinsThisWeek / 60).toFixed(1));
 
     // Count REAL unique partners across all completed sessions
     const uniquePartnersSet = new Set<string>();
@@ -89,7 +121,6 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
     const activeDatesSet = new Set<string>();
     
     // Add today
-    const now = new Date();
     const todayStr = now.toISOString().split('T')[0] || "";
     activeDatesSet.add(todayStr);
 
@@ -159,7 +190,9 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
     const stats = {
       streak: currentStreak,
       bestStreak: bestStreak,
-      hours: Number(totalHours.toFixed(1)),
+      hours: hoursThisWeek,
+      hoursThisWeek: hoursThisWeek,
+      totalHours: totalHours,
       partners: uniquePartners,
       score: avgScore
     };
@@ -190,13 +223,6 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
     const userSubjects = user.profile?.subjects || [];
     const userTopics = user.profile?.topics || [];
     const dbAcademicGoals = user.profile?.academicGoals?.trim();
-
-    // Determine current calendar week bounds (Monday to Sunday)
-    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday...
-    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
-    const currentMonday = new Date(now);
-    currentMonday.setDate(now.getDate() + diffToMonday);
-    currentMonday.setHours(0, 0, 0, 0);
 
     const currentSunday = new Date(currentMonday);
     currentSunday.setDate(currentMonday.getDate() + 6);

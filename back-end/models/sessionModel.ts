@@ -119,9 +119,28 @@ export const SessionModel = {
             }
 
             const safeSess = session as any;
-            const sessionTopics: string[] = Array.isArray(safeSess.analysis?.topics) && safeSess.analysis.topics.length > 0
-                ? safeSess.analysis.topics
-                : [session.subject || session.title || "General Study"];
+            let sessionTopics: string[] = [];
+
+            if (Array.isArray(safeSess.analysis?.topics) && safeSess.analysis.topics.length > 0) {
+                sessionTopics = safeSess.analysis.topics.filter((t: string) => t && t.toLowerCase() !== "general study" && t.toLowerCase() !== "general review");
+            }
+
+            if (sessionTopics.length === 0 && safeSess.title) {
+                const cleanedTitle = safeSess.title
+                    .replace(/AI Session/i, '')
+                    .replace(/Study Session/i, '')
+                    .replace(/Session/i, '')
+                    .trim();
+                if (cleanedTitle && cleanedTitle.toLowerCase() !== "general") sessionTopics = [cleanedTitle];
+            }
+
+            if (sessionTopics.length === 0 && profile?.topics && profile.topics.length > 0) {
+                sessionTopics = profile.topics;
+            }
+
+            if (sessionTopics.length === 0) {
+                sessionTopics = [session.subject || "General Study"];
+            }
 
             sessionTopics.forEach((topic: string) => {
                 topicMinsMap[topic] = (topicMinsMap[topic] || 0) + Math.round(mins / sessionTopics.length);
