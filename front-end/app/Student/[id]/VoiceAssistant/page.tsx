@@ -247,17 +247,12 @@ export default function VoiceAssistantPage() {
       hasFinalizedRef.current = false;
 
       try {
-        const voiceId = profile?.preferredVoice || "aura-asteria-en";
         const call = await vapiRef.current.start(ASSISTANT_ID, {
           variableValues: {
-            learningStyle: profile?.learningStyle?.join(", ") || "Adaptive",
+            learningStyle: Array.isArray(profile?.learningStyle) ? profile.learningStyle.join(", ") : (profile?.learningStyle || "Adaptive"),
             currentTopic: finalTopic,
             academicGoals: profile?.academicGoals || "Improve understanding.",
             pastSessionMemory: memory || "No previous session."
-          },
-          voice: {
-            provider: "deepgram",
-            voiceId: voiceId
           }
         });
 
