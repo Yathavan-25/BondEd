@@ -214,7 +214,7 @@ export default function ProfilePage() {
     }
   };
 
-  const selectedVoice = DEEPGRAM_VOICES.find((v) => v.id === profileData.preferredVoice);
+
   const inputClass =
     "w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-800 outline-none transition-all focus:border-[#1363CB] focus:bg-white focus:ring-2 focus:ring-[#1363CB]/30";
   const labelClass =
@@ -285,9 +285,7 @@ export default function ProfilePage() {
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-[#1363CB]">
                   {profileData.learningStyle}
                 </span>
-                <span className="rounded-full bg-purple-50 px-3 py-1 text-[11px] font-bold text-[#9C2FDF]">
-                  Voice · {selectedVoice?.name}
-                </span>
+
                 <span
                   className={`rounded-full px-3 py-1 text-[11px] font-bold ${profileData.mfaEnabled ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
                     }`}
