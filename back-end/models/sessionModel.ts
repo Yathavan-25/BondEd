@@ -353,47 +353,68 @@ export const SessionModel = {
 
         let safeData = structuredData || {};
 
-        // If structuredData is missing summary/goal or if session ended forcefully, run Gemini on transcriptsArray!
-        if ((!safeData.summary && !safeData.sessionSummary || !safeData.weeklyGoal || summary.includes("forcefully ended")) && Array.isArray(transcriptsArray) && transcriptsArray.length > 0) {
+        // Always run Gemini fallback when submitSessionUpdate was never called (no weeklyGoal/summary)
+        const needsGemini = (!safeData.summary && !safeData.sessionSummary) || !safeData.weeklyGoal;
+        if (needsGemini && Array.isArray(transcriptsArray) && transcriptsArray.length > 0) {
             try {
                 const geminiApiKey = process.env.GEMINI_API_KEY;
                 if (geminiApiKey) {
-                    const transcriptText = transcriptsArray.map((t: any) => `${t.role || t.sender || 'speaker'}: ${t.text || t.message || ''}`).join("\n");
-                    const prompt = `You are analyzing a student-AI voice study session on topic "${safeTopic}". Output ONLY valid JSON matching this schema:
+                    // Filter out image entries (base64 strings would destroy the prompt)
+                    const transcriptText = transcriptsArray
+                        .filter((t: any) => t.type !== "image")
+                        .map((t: any) => `${t.role === "ai" ? "AI" : "Student"}: ${(t.text || t.message || "").substring(0, 500)}`)
+                        .join("\n");
+
+                    const prompt = `You are analyzing a student-AI voice tutoring session on topic "${safeTopic}".
+Based only on the transcript below, output ONLY valid JSON (no markdown, no backticks, no explanation) matching this exact schema. All scores must be HONEST integers (0-100) reflecting actual student performance — do NOT use placeholder values:
 {
-  "sessionSummary": "2-3 concise sentence summary of key concepts discussed in transcript",
-  "weeklyGoal": "The specific goal mentioned by student or inferred for next session (e.g. 'Review CSS Flexbox')",
-  "knowledgeScore": 85,
-  "bigFivePersonality": { "openness": 80, "conscientiousness": 85, "extraversion": 75, "agreeableness": 80 },
-  "sessionInsight": "1 concise sentence observation about student's focus and learning style",
+  "summary": "2-3 sentence summary of what was covered and how the student performed",
+  "weeklyGoal": "Specific next-step goal (e.g. 'Practice JavaScript arrays'). Must be concrete, never generic.",
+  "focusScore": 72,
+  "knowledgeScore": 65,
+  "knowledgeFeedback": "One sentence: one strength and one area for improvement.",
+  "analyticalScore": 60,
+  "theoreticalScore": 70,
+  "handsOnScore": 55,
   "learningPattern": "Visual",
-  "topicsCovered": ["${safeTopic}"]
+  "sessionInsight": "One specific sentence about how THIS student engaged — what they grasped quickly, what confused them.",
+  "bigFivePersonality": { "openness": 70, "conscientiousness": 65, "extraversion": 60, "agreeableness": 75 },
+  "personalityReasoning": "1-2 sentences explaining the Big Five scores from this conversation.",
+  "topicsCovered": ["${safeTopic}"],
+  "flashcards": ["Q: <question>? A: <answer>", "Q: <question>? A: <answer>"]
 }
 
 Transcript:
 ${transcriptText}`;
+
+                    console.log("[Gemini Fallback] Running transcript analysis for topic:", safeTopic);
 
                     const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: prompt }] }],
-                            generationConfig: { response_mime_type: "application/json" }
+                            generationConfig: { temperature: 0.3 }
                         })
                     });
 
                     if (geminiRes.ok) {
                         const geminiJson: any = await geminiRes.json();
                         const rawText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text;
+                        console.log("[Gemini Fallback] Raw response:", rawText?.substring(0, 300));
                         if (rawText) {
                             const cleanedText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
                             const parsed = JSON.parse(cleanedText);
-                            safeData = { ...safeData, ...parsed };
+                            safeData = { ...parsed, ...safeData }; // safeData wins for any fields already set
+                            console.log("[Gemini Fallback] Parsed successfully. weeklyGoal:", parsed.weeklyGoal);
                         }
+                    } else {
+                        const errText = await geminiRes.text();
+                        console.error("[Gemini Fallback] API error:", geminiRes.status, errText);
                     }
                 }
             } catch (aiErr) {
-                console.error("Gemini transcript parsing failed:", aiErr);
+                console.error("[Gemini Fallback] Failed:", aiErr);
             }
         }
 
