@@ -206,6 +206,10 @@ export default function VoiceAssistantPage() {
         toolArgs = msg.functionCall.parameters;
       }
 
+      if (typeof toolArgs === "string") {
+        try { toolArgs = JSON.parse(toolArgs); } catch (e) { console.error("Failed to parse toolArgs", e); toolArgs = {}; }
+      }
+
       if (toolName === "submitSessionUpdate" && toolArgs) {
         finalizeSession(toolArgs, toolArgs.summary);
       } else if (toolName === "generateVisualAid" && toolArgs?.prompt) {

@@ -354,7 +354,7 @@ export const SessionModel = {
         let safeData = structuredData || {};
 
         // If structuredData is missing summary/goal or if session ended forcefully, run Gemini on transcriptsArray!
-        if ((!safeData.sessionSummary || !safeData.weeklyGoal || summary.includes("forcefully ended")) && Array.isArray(transcriptsArray) && transcriptsArray.length > 0) {
+        if ((!safeData.summary && !safeData.sessionSummary || !safeData.weeklyGoal || summary.includes("forcefully ended")) && Array.isArray(transcriptsArray) && transcriptsArray.length > 0) {
             try {
                 const geminiApiKey = process.env.GEMINI_API_KEY;
                 if (geminiApiKey) {
@@ -396,7 +396,7 @@ ${transcriptText}`;
             }
         }
 
-        const summaryText = safeData.sessionSummary || (summary.includes("forcefully ended") ? `Voice study session on ${safeTopic} completed.` : summary) || "Collaborative study session completed.";
+        const summaryText = safeData.summary || safeData.sessionSummary || (summary.includes("forcefully ended") ? `Voice study session on ${safeTopic} completed.` : summary) || "Collaborative study session completed.";
         const focusScore = safeData.groupFocusScore ?? safeData.focusScore ?? 85;
         const collaborationQuality = safeData.collaborationQuality ?? 85;
         const flashcards = Array.isArray(safeData.flashcards) ? safeData.flashcards : [];
