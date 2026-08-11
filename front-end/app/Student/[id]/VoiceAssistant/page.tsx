@@ -253,10 +253,6 @@ export default function VoiceAssistantPage() {
             currentTopic: finalTopic,
             academicGoals: profile?.academicGoals || "Improve understanding.",
             pastSessionMemory: memory || "No previous session."
-          },
-          voice: {
-            provider: "deepgram",
-            voiceId: voiceId
           }
         });
 

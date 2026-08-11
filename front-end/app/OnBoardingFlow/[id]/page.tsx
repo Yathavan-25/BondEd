@@ -320,7 +320,7 @@ export default function OnboardingFlow() {
       vapi.off("message", onMessage);
       vapi.stop();
     };
-  }, [selectedSubjects, studentId]);
+  }, [selectedSubjects, selectedTopics, studentId]);
 
   // CHANGED LIMIT TO 2
   const toggleSubject = (id: string) => {
