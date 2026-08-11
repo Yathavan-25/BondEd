@@ -371,7 +371,7 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
             {session.participantDetails && session.participantDetails.length > 0 ? (
               session.participantDetails.map((pd: any, i: number) => (
                 pd.avatarUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img key={i} src={pd.avatarUrl} alt={pd.initials} className="w-8 h-8 rounded-full border-2 border-white object-cover -ml-2 first:ml-0" />
                 ) : (
                   <div
@@ -760,7 +760,7 @@ function CreateSessionModal({
                             }`}
                           >
                             {f.avatarUrl ? (
-                              /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+                              /* eslint-disable-next-line @next/next/no-img-element */
                               <img src={f.avatarUrl} alt={f.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
                             ) : (
                               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1363CB] to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">

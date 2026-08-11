@@ -133,7 +133,7 @@ function MatchRadial({ value }: { value: number }) {
 function Avatar({ initials, bg, avatarUrl }: { initials: string; bg: string; avatarUrl?: string | null }) {
   if (avatarUrl) {
     return (
-      /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+      /* eslint-disable-next-line @next/next/no-img-element */
       <img src={avatarUrl} alt={initials} className="w-11 h-11 rounded-[12px] object-cover shrink-0 shadow-inner" />
     );
   }

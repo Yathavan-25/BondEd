@@ -351,7 +351,7 @@ function PartnerCard({ initials, name, subject, match, gradient, avatarUrl }: an
     <div className="flex items-center justify-between p-3.5 rounded-[16px] border border-gray-100 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
       <div className="flex items-center gap-3 min-w-0">
         {avatarUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
+          /* eslint-disable-next-line @next/next/no-img-element */
           <img src={avatarUrl} alt={name} className="w-10 h-10 rounded-[12px] object-cover shrink-0" />
         ) : (
           <div className={`w-10 h-10 rounded-[12px] bg-linear-to-br ${gradient} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>

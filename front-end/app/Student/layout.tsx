@@ -481,8 +481,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <div key={n.id} className="p-3 bg-gray-50 hover:bg-gray-100/80 rounded-xl transition-colors flex items-center justify-between gap-3 border border-gray-100">
                               <div className="flex items-center gap-2.5 min-w-0">
                                 {n.avatarUrl ? (
-                                  /* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */
-                                  <img src={n.avatarUrl} className="w-9 h-9 rounded-full object-cover shrink-0 shadow-xs" />
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img src={n.avatarUrl} alt={n.name} className="w-9 h-9 rounded-full object-cover shrink-0 shadow-xs" />
                                 ) : (
                                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
                                     {n.initials || "ST"}
