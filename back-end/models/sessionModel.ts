@@ -493,40 +493,7 @@ ${transcriptText}`;
             ? rawBigFiveEntries.map(([trait, v]) => `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${v}%`)
             : ["Openness: 85%", "Conscientiousness: 80%", "Analytical: 85%", "Engaged: 90%"];
 
-        // --- CACHED IMAGE SUPPORT FOR VISUAL LEARNERS ---
-        let visualAsset: { topic: string; imageUrl: string; source: string } | null = null;
-        try {
-            const topicKeyword = safeTopic;
-            const subjectKeyword = profile.subjects?.[0] || "General Study";
-            const promptKeyword = encodeURIComponent(`${topicKeyword} ${subjectKeyword} concept diagram`);
-            const generatedUrl = `https://image.pollinations.ai/prompt/${promptKeyword}?width=800&height=400&nologo=true`;
-
-            const existingImg = await prisma.cachedImage.findFirst({
-                where: { topic: { equals: safeTopic, mode: 'insensitive' } }
-            });
-
-            if (existingImg) {
-                await prisma.cachedImage.update({
-                    where: { id: existingImg.id },
-                    data: { usageCount: { increment: 1 } }
-                }).catch(() => {});
-                visualAsset = { topic: safeTopic, imageUrl: existingImg.imageUrl, source: existingImg.source };
-            } else {
-                const newCached = await prisma.cachedImage.create({
-                    data: {
-                        topic: safeTopic,
-                        subject: subjectKeyword,
-                        imageUrl: generatedUrl,
-                        source: "pollinations",
-                        keywords: [safeTopic, subjectKeyword],
-                        usageCount: 1
-                    }
-                });
-                visualAsset = { topic: safeTopic, imageUrl: newCached.imageUrl, source: newCached.source };
-            }
-        } catch (imgErr) {
-            console.error("Failed to query/save CachedImage:", imgErr);
-        }
+        // (Visual assets are now generated live and stored in transcripts)
 
         const newSession = await prisma.session.create({
             data: {
@@ -542,13 +509,12 @@ ${transcriptText}`;
                         transcriptUrl: JSON.stringify(transcriptsArray || []),
                         summary: summaryText,
                         topics: topics,
-                        participantMetrics: { focus: focusScore, collaborationQuality, participation: userAssessment?.participationLevel || "Active", insight: sessionInsight, assessments, visualAsset },
+                        participantMetrics: { focus: focusScore, collaborationQuality, participation: userAssessment?.participationLevel || "Active", insight: sessionInsight, assessments },
                         knowledgeDemonstrated: { score: knowledgeScore, strengths: [{ subject: safeTopic, proficiency: knowledgeScore }] },
                         profileUpdates: {
                             nextSteps: weeklyGoal,
                             learningStyleHint: assessedPattern || (profile.learningStyle?.[0] || "Adaptive"),
-                            exhibitedTraits,
-                            visualAsset
+                            exhibitedTraits
                         },
                         flashcardsGenerated: flashcards
                     }

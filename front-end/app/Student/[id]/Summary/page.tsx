@@ -295,31 +295,7 @@ export default function SessionSummaryPage() {
                 </div>
               </div>
 
-              {(currentData.lesson.visualAsset?.imageUrl || currentData.analytics.learningStyle?.toLowerCase().includes("visual")) && (
-                <div className="bg-white rounded-3xl border border-gray-200 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] p-6 sm:p-8 overflow-hidden">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-[#9C2FDF]" /> Visual Concept & Architecture Diagram
-                    </h3>
-                    <span className="px-3 py-1 bg-purple-100 text-[#9C2FDF] text-xs font-bold rounded-full">
-                      Visual Learning Mode
-                    </span>
-                  </div>
-                  <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden border border-gray-100 shadow-inner bg-gray-900 group">
-                    <img 
-                      src={currentData.lesson.visualAsset?.imageUrl || `https://image.pollinations.ai/prompt/${encodeURIComponent((currentData.lesson.topicsCovered?.[0] || 'Web Development') + ' educational concept diagram architecture')}` } 
-                      alt="Visual Study Concept"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-linear-to-t from-gray-950/80 via-transparent to-transparent flex items-end p-5">
-                      <div className="text-white">
-                        <p className="text-xs font-bold uppercase tracking-wider text-purple-300">Cached Concept Visual</p>
-                        <p className="text-base font-bold">{currentData.lesson.topicsCovered?.[0] || 'Concept Diagram'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+
 
               {currentData.lesson.flashcards && currentData.lesson.flashcards.length > 0 && (
                 <div className="bg-white rounded-3xl border border-gray-200 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] p-6 sm:p-8">
@@ -349,7 +325,13 @@ export default function SessionSummaryPage() {
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 ${msg.role === 'user' ? 'bg-gray-800' : 'bg-linear-to-br from-[#1363CB] to-[#9C2FDF]'}`}>
                               {msg.role === 'user' ? <span className="text-xs font-bold">ME</span> : <Sparkles className="w-4 h-4" />}
                             </div>
-                            <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
+                            <div className="flex-1 min-w-0">
+                              {msg.type === 'image' ? (
+                                <img src={msg.text} alt="Generated visual aid" className="w-full max-w-sm h-auto rounded-xl border border-gray-200/50 shadow-sm" />
+                              ) : (
+                                <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
+                              )}
+                            </div>
                           </div>
                       ))}
                   </div>

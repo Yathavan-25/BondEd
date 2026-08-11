@@ -16,7 +16,7 @@ const VAPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "";
 const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_PERSONALIZED_ASSISTANT_ID || "";
 
 type AssistantState = "idle" | "loading" | "listening" | "paused" | "stopped" | "analyzing";
-type TranscriptMessage = { role: "user" | "ai"; text: string };
+type TranscriptMessage = { role: "user" | "ai"; text: string; type?: "text" | "image" };
 
 export default function VoiceAssistantPage() {
   const params = useParams<{ id: string }>();
@@ -38,6 +38,7 @@ export default function VoiceAssistantPage() {
   // Real-time credits & warnings
   const [availableMinutes, setAvailableMinutes] = useState<number>(0);
   const [timeWarning, setTimeWarning] = useState<string | null>(null);
+  const [generatingImage, setGeneratingImage] = useState<boolean>(false);
 
   const vapiRef = useRef<any>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
@@ -107,6 +108,30 @@ export default function VoiceAssistantPage() {
     };
     fetchContext();
   }, [studentId]);
+
+  const handleGenerateVisualAid = async (prompt: string) => {
+    setGeneratingImage(true);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
+      const finalTopic = customTopic.trim() || selectedTopic;
+      
+      const res = await fetch(`${baseUrl}/api/images/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ prompt, topic: finalTopic, subject: "General" }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setTranscripts((prev) => [...prev, { role: "ai", text: data.imageUrl, type: "image" }]);
+      }
+    } catch (err) {
+      console.error("Failed to generate visual aid:", err);
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
 
   const finalizeSession = async (structuredData: any, summary?: string) => {
     if (hasFinalizedRef.current) return;
@@ -183,6 +208,8 @@ export default function VoiceAssistantPage() {
 
       if (toolName === "submitSessionUpdate" && toolArgs) {
         finalizeSession(toolArgs, toolArgs.summary);
+      } else if (toolName === "generateVisualAid" && toolArgs?.prompt) {
+        handleGenerateVisualAid(toolArgs.prompt);
       }
     };
 
@@ -437,11 +464,28 @@ export default function VoiceAssistantPage() {
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 ${msg.role === 'user' ? 'bg-gray-800' : 'bg-linear-to-br from-[#1363CB] to-[#9C2FDF]'}`}>
                           {msg.role === 'user' ? <span className="text-xs font-bold">ME</span> : <Sparkles className="w-4 h-4" />}
                         </div>
-                        <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
+                        <div className="flex-1 min-w-0">
+                          {msg.type === "image" ? (
+                            <img src={msg.text} alt="Generated visual aid" className="w-full max-w-sm h-auto rounded-xl border border-gray-200/50 shadow-sm" />
+                          ) : (
+                            <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
+                          )}
+                        </div>
                       </motion.div>
                     ))
                   )}
                 </AnimatePresence>
+                {generatingImage && (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-[16px] p-4 flex items-start gap-4 border bg-linear-to-br from-indigo-50/70 to-purple-50/40 border-[#1363CB]/20">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 bg-linear-to-br from-[#1363CB] to-[#9C2FDF]">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 text-[#9C2FDF] animate-spin" />
+                      <p className="text-sm font-bold text-[#1363CB] animate-pulse">Generating visual aid...</p>
+                    </div>
+                  </motion.div>
+                )}
                 {liveMessage && (
                   <div className={`flex flex-col ${liveMessage.role === "user" ? "items-end" : "items-start"}`}>
                     <span className={`text-[10px] font-bold uppercase mb-1 ${liveMessage.role === "user" ? "text-blue-500" : "text-violet-500"}`}>

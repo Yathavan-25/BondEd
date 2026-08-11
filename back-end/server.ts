@@ -15,6 +15,7 @@ import summaryRoutes from './routes/summaryRoute.js';
 import paymentRoutes from './routes/paymentRoute.js';
 import searchRoute from './routes/searchRoute.js';
 import feedbackRoute from './routes/feedbackRoute.js';
+import imageRoute from './routes/imageRoute.js';
 
 // Import Webhook Controller
 import { stripeWebhook } from './controllers/paymentController.js';
@@ -44,6 +45,7 @@ app.use('/api/summary', summaryRoutes);
 app.use('/api/payments', paymentRoutes); // Other payment routes
 app.use('/api/search', searchRoute);
 app.use('/api/feedback', feedbackRoute);
+app.use('/api/images', imageRoute);
 
 // 5. Health check endpoint
 app.get('/health', (_req, res) => {
