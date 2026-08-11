@@ -392,6 +392,75 @@ export const endSession = async (req: Request, res: Response): Promise<void> => 
                         }
                     }
                 });
+
+                // Update individual student profiles from Gemini participantAssessments
+                for (const u of allUsers) {
+                    try {
+                        const uName = (u.firstName || u.email?.split('@')[0] || "").toLowerCase();
+                        const pAssessment = participantAssessments.find((pa: any) => pa.name && pa.name.toLowerCase() === uName) || {};
+                        
+                        const profile = await prisma.profile.findUnique({ where: { userId: u.id } });
+                        if (profile) {
+                            const priorPersonality = (profile.personality as Record<string, any>) || {};
+                            const newBigFive = pAssessment.bigFivePersonality || {};
+                            const mergedPersonality: Record<string, any> = { ...priorPersonality };
+
+                            (["openness", "conscientiousness", "extraversion", "agreeableness"] as const).forEach((trait) => {
+                                if (typeof newBigFive[trait] === "number") {
+                                    const prior = typeof priorPersonality[trait] === "number" ? priorPersonality[trait] : newBigFive[trait];
+                                    mergedPersonality[trait] = Math.round((prior + newBigFive[trait]) / 2);
+                                }
+                            });
+                            mergedPersonality.updatedAt = new Date().toISOString();
+
+                            const kScore = pAssessment.knowledgeScore || 85;
+                            const currentKnowledge = (profile.knowledgeLevel as any) || { score: 50, topicBreakdown: [] };
+                            const mergedBreakdown: any[] = Array.isArray(currentKnowledge.topicBreakdown) ? [...currentKnowledge.topicBreakdown] : [];
+                            
+                            const existingIdx = mergedBreakdown.findIndex((b) => b.topic && b.topic.toLowerCase().trim() === sessionSubject.toLowerCase().trim());
+                            if (existingIdx !== -1) {
+                                mergedBreakdown[existingIdx] = {
+                                    ...mergedBreakdown[existingIdx],
+                                    score: Math.round((mergedBreakdown[existingIdx].score + kScore) / 2),
+                                    summary: pAssessment.insight || mergedBreakdown[existingIdx].summary || ""
+                                };
+                            } else {
+                                mergedBreakdown.push({
+                                    topic: sessionSubject,
+                                    subject: sessionSubject,
+                                    score: kScore,
+                                    summary: pAssessment.insight || ""
+                                });
+                            }
+
+                            const overallScore = mergedBreakdown.length > 0
+                                ? Math.round(mergedBreakdown.reduce((sum, b) => sum + (b.score || 0), 0) / mergedBreakdown.length)
+                                : kScore;
+
+                            let newLearningStyle = profile.learningStyle;
+                            if (pAssessment.learningPattern) newLearningStyle = [pAssessment.learningPattern];
+
+                            const currentGoals = profile.academicGoals || "";
+                            const nextStepGoal = finalActionItems[0] || `Review ${sessionSubject} collaborative session topics.`;
+                            const updatedGoals = currentGoals 
+                                ? `${currentGoals}\n[Week of ${new Date().toLocaleDateString()}]: ${nextStepGoal}` 
+                                : `[Week of ${new Date().toLocaleDateString()}]: ${nextStepGoal}`;
+
+                            await prisma.profile.update({
+                                where: { userId: u.id },
+                                data: {
+                                    academicGoals: updatedGoals,
+                                    knowledgeLevel: { ...currentKnowledge, score: overallScore, topicBreakdown: mergedBreakdown },
+                                    learningStyle: newLearningStyle,
+                                    personality: mergedPersonality,
+                                    updatedAt: new Date()
+                                }
+                            });
+                        }
+                    } catch (pErr) {
+                        console.error(`Failed to update profile for participant ${u.id}:`, pErr);
+                    }
+                }
             }
         }
 
