@@ -115,19 +115,27 @@ export default function VoiceAssistantPage() {
       const token = await getAuth().currentUser?.getIdToken();
       const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
       const finalTopic = customTopic.trim() || selectedTopic;
+      const subject = profile?.subjects?.[0] || finalTopic || "General";
 
       const res = await fetch(`${baseUrl}/api/images/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ prompt, topic: finalTopic, subject: "General" }),
+        body: JSON.stringify({ prompt, topic: finalTopic, subject }),
       });
 
       if (res.ok) {
         const data = await res.json();
         setTranscripts((prev) => [...prev, { role: "ai", text: data.imageUrl, type: "image" }]);
+      } else {
+        const errData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        console.error("Image generation failed:", errData);
+        toast.error("Couldn't generate image right now.");
+        // Add a fallback message in transcript so user knows
+        setTranscripts((prev) => [...prev, { role: "ai", text: "(Image generation failed — check server logs for details.)", type: "text" }]);
       }
     } catch (err) {
       console.error("Failed to generate visual aid:", err);
+      toast.error("Network error generating image.");
     } finally {
       setGeneratingImage(false);
     }

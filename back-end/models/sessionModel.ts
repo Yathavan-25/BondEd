@@ -35,15 +35,16 @@ export const SessionModel = {
 
         for (const session of sessions) {
             const allUsers = new Set([session.hostId, ...session.participants.map(p => p.id)]);
-            const isVoice = allUsers.size === 1;
-
-            const durationMins = getDurationMins(session.startTime, session.endTime);
             const safeSession = session as any;
             const analysis = safeSession.analysis;
+            const partMet = analysis?.participantMetrics || {};
+            
+            const isVoice = partMet?.sessionType === 'ai-voice' || safeSession.title?.includes("AI Session") || (!session.dailyRoomUrl && allUsers.size === 1);
+
+            const durationMins = getDurationMins(session.startTime, session.endTime);
             
             const knowDem = analysis?.knowledgeDemonstrated || {};
             const profUpd = analysis?.profileUpdates || {};
-            const partMet = analysis?.participantMetrics || {};
 
             const parsedTranscript = parseTranscript(analysis?.transcriptUrl);
             const rawTraits = profUpd?.exhibitedTraits;
@@ -373,9 +374,6 @@ Based only on the transcript below, output ONLY valid JSON (no markdown, no back
   "focusScore": 72,
   "knowledgeScore": 65,
   "knowledgeFeedback": "One sentence: one strength and one area for improvement.",
-  "analyticalScore": 60,
-  "theoreticalScore": 70,
-  "handsOnScore": 55,
   "learningPattern": "Visual",
   "sessionInsight": "One specific sentence about how THIS student engaged — what they grasped quickly, what confused them.",
   "bigFivePersonality": { "openness": 70, "conscientiousness": 65, "extraversion": 60, "agreeableness": 75 },
@@ -405,7 +403,7 @@ ${transcriptText}`;
                         if (rawText) {
                             const cleanedText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
                             const parsed = JSON.parse(cleanedText);
-                            safeData = { ...parsed, ...safeData }; // safeData wins for any fields already set
+                            safeData = { ...parsed, ...safeData }; 
                             console.log("[Gemini Fallback] Parsed successfully. weeklyGoal:", parsed.weeklyGoal);
                         }
                     } else {
@@ -418,31 +416,20 @@ ${transcriptText}`;
             }
         }
 
-        const summaryText = safeData.summary || safeData.sessionSummary || (summary.includes("forcefully ended") ? `Voice study session on ${safeTopic} completed.` : summary) || "Collaborative study session completed.";
-        const focusScore = safeData.groupFocusScore ?? safeData.focusScore ?? 85;
-        const collaborationQuality = safeData.collaborationQuality ?? 85;
+        const summaryText = safeData.summary || safeData.sessionSummary || summary || "Completed voice study session.";
+        const focusScore = safeData.focusScore ?? 78;
+        const knowledgeScore = safeData.knowledgeScore ?? 70;
+        const weeklyGoal = safeData.weeklyGoal || "Review session concepts.";
         const flashcards = Array.isArray(safeData.flashcards) ? safeData.flashcards : [];
-        const actionItems = Array.isArray(safeData.actionItems) ? safeData.actionItems : [];
-        const topics = Array.isArray(safeData.topicsCovered) && safeData.topicsCovered.length > 0 
-            ? safeData.topicsCovered 
+        const sessionInsight = safeData.sessionInsight || null;
+        const newBigFive = (safeData.bigFivePersonality || {}) as Record<string, any>;
+        const topics = Array.isArray(safeData.topicsCovered) && safeData.topicsCovered.length > 0
+            ? safeData.topicsCovered
             : [safeTopic];
 
-        // Extract participant assessment for current user if available
-        const assessments = Array.isArray(safeData.participantAssessments) ? safeData.participantAssessments : [];
-        const userFirstName = profile.user?.firstName?.toLowerCase() || "";
-        const userAssessment = assessments.find((a: any) => a.name && a.name.toLowerCase() === userFirstName) || assessments[0] || {};
-
-        const knowledgeScore = typeof userAssessment?.knowledgeScore === "number" 
-            ? userAssessment.knowledgeScore 
-            : (safeData.knowledgeScore ?? 85);
-
-        const weeklyGoal = safeData.weeklyGoal || (actionItems.length > 0 ? actionItems.join("; ") : "Review session concepts.");
-        const sessionInsight = userAssessment?.insight || safeData.sessionInsight || "Demonstrated active curiosity and steady progress.";
-
         const priorPersonality = (profile.personality as any) || {};
-        const newBigFive = (userAssessment?.bigFivePersonality || safeData.bigFivePersonality || {}) as Record<string, any>;
         const mergedPersonality: Record<string, any> = { ...priorPersonality };
-    
+
         (["openness", "conscientiousness", "extraversion", "agreeableness"] as const).forEach((trait) => {
             if (typeof newBigFive[trait] === "number") {
                 const prior = typeof priorPersonality[trait] === "number" ? priorPersonality[trait] : newBigFive[trait];
@@ -451,17 +438,14 @@ ${transcriptText}`;
         });
         if (safeData.personalityReasoning) mergedPersonality.reasoning = safeData.personalityReasoning;
         mergedPersonality.updatedAt = new Date().toISOString();
-    
+
         let newLearningStyle = profile.learningStyle;
-        const assessedPattern = userAssessment?.learningPattern || safeData.learningPattern;
-        if (assessedPattern) newLearningStyle = [assessedPattern];
-    
-        // --- FORCE KNOWLEDGE LEVEL TO TRACK THE SELECTED TOPIC ---
+        if (safeData.learningPattern) newLearningStyle = [safeData.learningPattern];
+
         const currentKnowledge = (profile.knowledgeLevel as any) || { score: 50, topicBreakdown: [] };
         const mergedBreakdown: any[] = Array.isArray(currentKnowledge.topicBreakdown) ? [...currentKnowledge.topicBreakdown] : [];
-        
+
         const existingIdx = mergedBreakdown.findIndex((b) => b.topic && b.topic.toLowerCase().trim() === safeTopic.toLowerCase().trim());
-        
         if (existingIdx !== -1) {
             mergedBreakdown[existingIdx] = {
                 ...mergedBreakdown[existingIdx],
@@ -476,28 +460,26 @@ ${transcriptText}`;
                 summary: safeData.knowledgeFeedback || ""
             });
         }
-    
+
         const overallScore = mergedBreakdown.length > 0
             ? Math.round(mergedBreakdown.reduce((sum, b) => sum + (b.score || 0), 0) / mergedBreakdown.length)
             : knowledgeScore;
-    
+
         const updatedKnowledge = {
             ...currentKnowledge,
             score: overallScore,
             topicBreakdown: mergedBreakdown,
             feedback: safeData.knowledgeFeedback || currentKnowledge.feedback || ""
         };
-    
+
         const currentTopics = Array.isArray(profile.topics) ? profile.topics : [];
-        const updatedTopics = currentTopics.includes(safeTopic) 
-            ? currentTopics 
-            : [...currentTopics, safeTopic];
-    
+        const updatedTopics = currentTopics.includes(safeTopic) ? currentTopics : [...currentTopics, safeTopic];
+
         const currentGoals = profile.academicGoals || "";
-        const updatedGoals = currentGoals 
-            ? `${currentGoals}\n[Week of ${new Date().toLocaleDateString()}]: ${weeklyGoal}` 
+        const updatedGoals = currentGoals
+            ? `${currentGoals}\n[Week of ${new Date().toLocaleDateString()}]: ${weeklyGoal}`
             : `[Week of ${new Date().toLocaleDateString()}]: ${weeklyGoal}`;
-    
+
         const updatedProfile = await prisma.profile.update({
             where: { userId },
             data: {
@@ -509,13 +491,11 @@ ${transcriptText}`;
                 updatedAt: new Date()
             }
         });
-    
+
         const rawBigFiveEntries = Object.entries(newBigFive).filter(([, v]) => typeof v === "number");
         const exhibitedTraits = rawBigFiveEntries.length > 0
             ? rawBigFiveEntries.map(([trait, v]) => `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${v}%`)
-            : ["Openness: 85%", "Conscientiousness: 80%", "Analytical: 85%", "Engaged: 90%"];
-
-        // (Visual assets are now generated live and stored in transcripts)
+            : [];
 
         const newSession = await prisma.session.create({
             data: {
@@ -531,11 +511,19 @@ ${transcriptText}`;
                         transcriptUrl: JSON.stringify(transcriptsArray || []),
                         summary: summaryText,
                         topics: topics,
-                        participantMetrics: { focus: focusScore, collaborationQuality, participation: userAssessment?.participationLevel || "Active", insight: sessionInsight, assessments },
-                        knowledgeDemonstrated: { score: knowledgeScore, strengths: [{ subject: safeTopic, proficiency: knowledgeScore }] },
+                        participantMetrics: {
+                            sessionType: "ai-voice",
+                            focus: focusScore,
+                            participation: "Active",
+                            insight: sessionInsight
+                        },
+                        knowledgeDemonstrated: {
+                            score: knowledgeScore,
+                            strengths: mergedBreakdown.map((b) => ({ subject: b.topic, proficiency: b.score }))
+                        },
                         profileUpdates: {
                             nextSteps: weeklyGoal,
-                            learningStyleHint: assessedPattern || (profile.learningStyle?.[0] || "Adaptive"),
+                            learningStyleHint: safeData.learningPattern || (profile.learningStyle?.[0] || "Adaptive"),
                             exhibitedTraits
                         },
                         flashcardsGenerated: flashcards
@@ -544,7 +532,7 @@ ${transcriptText}`;
             },
             include: { analysis: true }
         });
-    
+
         return { profile: updatedProfile, session: newSession };
     }
 };

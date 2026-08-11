@@ -257,6 +257,7 @@ export const endSession = async (req: Request, res: Response): Promise<void> => 
                             { role: "system", text: `Brief session on ${sessionSubject} completed.` }
                         ]),
                         participantMetrics: {
+                            sessionType: "collaborative",
                             groupFocusScore: 100,
                             collaborationQuality: 100,
                             actionItems: ["Schedule a full collaborative study session"],
@@ -376,6 +377,7 @@ export const endSession = async (req: Request, res: Response): Promise<void> => 
                             { role: "system", text: `Collaborative session on ${sessionSubject} completed (${effectiveDuration} mins).` }
                         ]),
                         participantMetrics: {
+                            sessionType: "collaborative",
                             groupFocusScore: aiAnalysisData?.groupFocusScore || 90,
                             collaborationQuality: aiAnalysisData?.collaborationQuality || 94,
                             actionItems: finalActionItems,
