@@ -115,13 +115,13 @@ export default function VoiceAssistantPage() {
       const token = await getAuth().currentUser?.getIdToken();
       const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
       const finalTopic = customTopic.trim() || selectedTopic;
-      
+
       const res = await fetch(`${baseUrl}/api/images/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ prompt, topic: finalTopic, subject: "General" }),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         setTranscripts((prev) => [...prev, { role: "ai", text: data.imageUrl, type: "image" }]);
@@ -489,7 +489,7 @@ export default function VoiceAssistantPage() {
                 {liveMessage && (
                   <div className={`flex flex-col ${liveMessage.role === "user" ? "items-end" : "items-start"}`}>
                     <span className={`text-[10px] font-bold uppercase mb-1 ${liveMessage.role === "user" ? "text-blue-500" : "text-violet-500"}`}>
-                      {liveMessage.role === "user" ? "You" : "Bondy"}
+                      {liveMessage.role === "user" ? "You" : "BondEd AI"}
                     </span>
                     <div className={`px-4 py-2.5 rounded-2xl text-sm opacity-70 ${liveMessage.role === "user" ? "bg-blue-600 text-white rounded-br-sm" : "bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm"}`}>
                       {liveMessage.text}
