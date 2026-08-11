@@ -71,9 +71,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             }
           }
         } else {
-          // If the backend fails to respond properly, just let them through (or handle error)
+          // /api/auth/me returned a non-OK status (e.g. 404 means user not synced yet)
+          // For protected routes, redirect to login. For public/onboarding, allow through.
           console.error("Failed to fetch user data for AuthGuard", res.status);
-          setLoading(false);
+          if (!isPublicPath && !isOnboarding) {
+            router.replace('/Login');
+          } else {
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error("Error checking user status in AuthGuard:", error);

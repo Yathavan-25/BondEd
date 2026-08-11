@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { syncUser, getUserCount, sendMfaCode, verifyMfaCode, sendVerificationEmail } from '../controllers/authController.js';
+import { syncUser, getUserCount, getMe, sendMfaCode, verifyMfaCode, sendVerificationEmail } from '../controllers/authController.js';
 import { protectRoute } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -16,5 +16,8 @@ router.post('/send-verification-email', sendVerificationEmail);
 
 // Endpoint to sync or register a verified user
 router.post('/sync', protectRoute, syncUser);
+
+// Get current authenticated user data (used by AuthGuard)
+router.get('/me', protectRoute, getMe);
 
 export default router;
