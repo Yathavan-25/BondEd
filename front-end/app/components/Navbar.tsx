@@ -107,15 +107,19 @@ const Navbar = () => {
           </ul>
         </nav>
         <div className="flex justify-center gap-3">
-          <button className="relative group overflow-hidden border-2 border-gray-300 shadow-sm px-6 py-2 flex items-center justify-center transition-all duration-900">
-            <span className="absolute bottom-0 right-0 w-64 h-64 bg-gray-800 rounded-full translate-x-1/2 translate-y-1/2 scale-0 group-hover:scale-[1.5] transition-transform duration-900 ease-in-out origin-center"></span>
-            <span className="relative z-10 text-gray-600 font-medium group-hover:text-white transition-colors duration-700">
-              Sign In
-            </span>
-          </button>
-          <button className="group border-2 bg-primary-linear px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all">
-            <span className="group-hover:text-primary-linear">Get Started</span>
-          </button>
+          <Link href="/Login">
+            <button className="relative group overflow-hidden border-2 border-gray-300 shadow-sm px-6 py-2 flex items-center justify-center transition-all duration-900">
+              <span className="absolute bottom-0 right-0 w-64 h-64 bg-gray-800 rounded-full translate-x-1/2 translate-y-1/2 scale-0 group-hover:scale-[1.5] transition-transform duration-900 ease-in-out origin-center"></span>
+              <span className="relative z-10 text-gray-600 font-medium group-hover:text-white transition-colors duration-700">
+                Sign In
+              </span>
+            </button>
+          </Link>
+          <Link href="/Register">
+            <button className="group border-2 bg-primary-linear px-6 py-2 text-white hover:bg-white hover:border-primary-linear transition-all">
+              <span className="group-hover:text-primary-linear">Get Started</span>
+            </button>
+          </Link>
         </div>
       </div>
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
