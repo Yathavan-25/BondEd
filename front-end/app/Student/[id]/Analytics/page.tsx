@@ -94,6 +94,41 @@ export default function AnalyticsPage() {
     return ICONS.Users;
   };
 
+  const handleDownloadReport = () => {
+    if (!data) return;
+    const reportText = [
+      `==================================================`,
+      `          BONDED LEARNING ANALYTICS REPORT        `,
+      `==================================================`,
+      `Report Date: ${new Date().toLocaleDateString()}`,
+      `Student ID: ${studentId}`,
+      ``,
+      `--- OVERALL METRICS ---`,
+      ...(data.stats || []).map((s: any) => `${s.title}: ${s.value} (${s.subtitle})`),
+      ``,
+      `--- CREDITS USAGE ---`,
+      `Voice Assistant: ${voiceUsed} / ${voiceTotal} mins used (${creditFilter})`,
+      `Live Collab Rooms: ${collabUsed} / ${collabTotal} mins used (${creditFilter})`,
+      ``,
+      `--- TIME BY TOPICS ---`,
+      ...(data.timeByTopic || data.timeBySubject || []).map((t: any) => `- ${t.topic || t.subject}: ${t.hours} (${t.percent}%)`),
+      ``,
+      `--- TOP STUDY PARTNERS ---`,
+      ...(data.topPartners || []).map((p: any) => `- ${p.name} (${p.subject}): ${p.hours} total - ${p.match} match`),
+      `==================================================`
+    ].join("\n");
+
+    const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `BondEd_Analytics_Report_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-50">
       <div className="mx-auto max-w-7xl px-4 md:px-8 pb-16">
@@ -115,8 +150,9 @@ export default function AnalyticsPage() {
           </div>
 
           <motion.button
+            onClick={handleDownloadReport}
             whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}
-            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.4)] transition-shadow hover:shadow-[0_12px_28px_-12px_rgba(0,0,0,0.5)]"
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.4)] transition-shadow hover:shadow-[0_12px_28px_-12px_rgba(0,0,0,0.5)] cursor-pointer"
           >
             <Download className="h-4 w-4" />
             Download Report
@@ -214,34 +250,37 @@ export default function AnalyticsPage() {
             </div>
           </motion.div>
 
-          {/* Subjects */}
+          {/* Topics */}
           <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-3xl border border-black/5 bg-white p-7 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_40px_-20px_rgba(15,23,42,0.15)]">
             <h3 className="mb-6 flex items-center gap-2 text-lg font-semibold text-gray-900">
-              <BookOpen className="h-5 w-5 text-gray-700" /> Time by Subject
+              <BookOpen className="h-5 w-5 text-gray-700" /> Time by Topics
             </h3>
 
             <div className="space-y-5">
-              {data.timeBySubject.map((item: any, i: number) => (
-                <div key={item.subject} className="group cursor-pointer">
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
-                      <span className="font-medium text-gray-800 transition-colors group-hover:text-gray-950">{item.subject}</span>
+              {(data.timeByTopic || data.timeBySubject || []).map((item: any, i: number) => {
+                const topicName = item.topic || item.subject;
+                return (
+                  <div key={topicName} className="group cursor-pointer">
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
+                        <span className="font-medium text-gray-800 transition-colors group-hover:text-gray-950">{topicName}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">{item.percent}%</span>
+                        <span className="font-semibold text-gray-900">{item.hours}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">{item.percent}%</span>
-                      <span className="font-semibold text-gray-900">{item.hours}</span>
+                    <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                      <motion.div
+                        initial={{ width: 0 }} animate={{ width: `${item.percent}%` }}
+                        transition={{ duration: 1, delay: 0.2 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                        className={`h-full rounded-full ${item.color} transition-all group-hover:brightness-110`}
+                      />
                     </div>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-                    <motion.div
-                      initial={{ width: 0 }} animate={{ width: `${item.percent}%` }}
-                      transition={{ duration: 1, delay: 0.2 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                      className={`h-full rounded-full ${item.color} transition-all group-hover:brightness-110`}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         </section>
@@ -252,9 +291,6 @@ export default function AnalyticsPage() {
             <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
               <Users className="h-5 w-5 text-gray-700" /> Top Study Partners
             </h3>
-            <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-700">
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
           </div>
 
           <div className="overflow-x-auto">

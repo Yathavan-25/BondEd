@@ -52,18 +52,20 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
     const completedSessions = allSessions.filter(s => s.status === "completed" || s.status === "Completed");
 
     // 1. Calculate REAL total study hours from Voice Assistant & Collaborative completed sessions
-    const totalHours = completedSessions.reduce((acc, s) => {
+    const sessionHours = completedSessions.reduce((acc, s) => {
       let durationHours = 0;
       if (s.startTime && s.endTime) {
         const diffMs = new Date(s.endTime).getTime() - new Date(s.startTime).getTime();
         durationHours = diffMs / (1000 * 60 * 60);
       }
-      // If endTime is missing or session was brief, count at least 0.5 hours (30 min) per completed study session
-      if (durationHours < 0.1) {
-        durationHours = 0.5;
-      }
-      return acc + durationHours;
+      return acc + Math.max(0, durationHours);
     }, 0);
+
+    const usageLogs = await prisma.usageLog.findMany({ where: { userId } });
+    const usageMins = usageLogs.reduce((acc, u) => acc + (u.usage || 0), 0);
+    const usageHours = usageMins / 60;
+
+    const totalHours = Math.max(sessionHours, usageHours);
 
     // Count REAL unique partners across all completed sessions
     const uniquePartnersSet = new Set<string>();

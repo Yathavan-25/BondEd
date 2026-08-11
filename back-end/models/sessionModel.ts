@@ -107,7 +107,7 @@ export const SessionModel = {
         const uniquePartners = new Set<string>();
         const partnerStats: Record<string, { name: string, initials: string, time: number, count: number, subjects: Record<string, number> }> = {};
         const dailyMins: Record<string, number> = { "Mon": 0, "Tue": 0, "Wed": 0, "Thu": 0, "Fri": 0, "Sat": 0, "Sun": 0 };
-        const subjectMinsMap: Record<string, number> = {};
+        const topicMinsMap: Record<string, number> = {};
 
         sessions.forEach(session => {
             const mins = getDurationMins(session.startTime, session.endTime);
@@ -118,8 +118,16 @@ export const SessionModel = {
                 dailyMins[dayName] = (dailyMins[dayName] ?? 0) + mins;
             }
 
+            const safeSess = session as any;
+            const sessionTopics: string[] = Array.isArray(safeSess.analysis?.topics) && safeSess.analysis.topics.length > 0
+                ? safeSess.analysis.topics
+                : [session.subject || session.title || "General Study"];
+
+            sessionTopics.forEach((topic: string) => {
+                topicMinsMap[topic] = (topicMinsMap[topic] || 0) + Math.round(mins / sessionTopics.length);
+            });
+
             const subj = session.subject || "General Study";
-            subjectMinsMap[subj] = (subjectMinsMap[subj] || 0) + mins;
 
             const peers = session.participants.filter(p => p.id !== userId);
             if (session.hostId !== userId) peers.push(session.host);
@@ -148,21 +156,23 @@ export const SessionModel = {
             "bg-pink-500", "bg-indigo-500", "bg-cyan-500", "bg-rose-500"
         ];
 
-        let timeBySubject = Object.entries(subjectMinsMap).map(([subject, mins], idx) => {
+        let timeByTopic = Object.entries(topicMinsMap).map(([topic, mins], idx) => {
             const percent = totalMins > 0 ? Math.round((mins / totalMins) * 100) : 0;
             return {
-                subject,
+                topic,
+                subject: topic, // Backwards compatibility
                 hours: mins >= 60 ? `${(mins / 60).toFixed(1)}h` : `${mins}m`,
                 percent,
                 color: colors[idx % colors.length]
             };
         }).sort((a, b) => b.percent - a.percent);
 
-        if (timeBySubject.length === 0) {
-            const userSubjects = profile?.subjects && profile.subjects.length > 0 ? profile.subjects : ["General Study"];
-            const equalShare = Math.floor(100 / userSubjects.length);
-            timeBySubject = userSubjects.map((subject, idx) => ({
-                subject,
+        if (timeByTopic.length === 0) {
+            const userTopics = profile?.topics && profile.topics.length > 0 ? profile.topics : ["General Study"];
+            const equalShare = Math.floor(100 / userTopics.length);
+            timeByTopic = userTopics.map((topic, idx) => ({
+                topic,
+                subject: topic,
                 hours: "0.0h",
                 percent: equalShare,
                 color: colors[idx % colors.length]
@@ -258,7 +268,8 @@ export const SessionModel = {
 
         return {
             topPartners,
-            timeBySubject,
+            timeByTopic,
+            timeBySubject: timeByTopic,
             creditsData,
             chartData,
             stats: [
