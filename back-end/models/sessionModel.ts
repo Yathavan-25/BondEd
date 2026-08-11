@@ -46,6 +46,12 @@ export const SessionModel = {
             const partMet = analysis?.participantMetrics || {};
 
             const parsedTranscript = parseTranscript(analysis?.transcriptUrl);
+            const rawTraits = profUpd?.exhibitedTraits;
+            const personalityTraits = (Array.isArray(rawTraits) && rawTraits.length > 0)
+                ? rawTraits
+                : ["Openness", "Conscientiousness", "Analytical", "Engaged"];
+
+            const visualAsset = profUpd?.visualAsset || partMet?.visualAsset || null;
 
             const formattedSession = {
                 id: session.id,
@@ -56,17 +62,18 @@ export const SessionModel = {
                     duration: `${durationMins} mins`,
                     peers: isVoice ? undefined : Array.from(allUsers).filter(id => id !== userId).map(() => "Peer"), 
                     topicsCovered: analysis?.topics || ["General Review"],
-                    keyTakeaways: analysis?.summary ? analysis.summary.split('.').filter(Boolean).slice(0, 3) : ["Session completed successfully."],
+                    keyTakeaways: analysis?.summary ? analysis.summary.split('.').map((s: string) => s.trim()).filter(Boolean).slice(0, 4) : ["Session completed successfully."],
                     nextSteps: profUpd?.nextSteps || "Review notes before next session.",
                     flashcards: analysis?.flashcardsGenerated || [],
-                    transcript: parsedTranscript
+                    transcript: parsedTranscript,
+                    visualAsset
                 },
                 analytics: {
                     score: knowDem?.score || 85,
                     knowledgeStrengths: knowDem?.strengths || [{ subject: analysis?.topics?.[0] || "Core Concepts", proficiency: 85 }],
-                    personalityTraits: profUpd?.exhibitedTraits || ["Focused", "Engaged"],
-                    learningStyle: profUpd?.learningStyleHint || "Adaptive",
-                    aiInsight: partMet?.insight || "Great focus during this session."
+                    personalityTraits,
+                    learningStyle: profUpd?.learningStyleHint || (session.host.profile?.learningStyle?.[0] || "Adaptive"),
+                    aiInsight: partMet?.insight || "Great focus and active engagement during this session."
                 }
             };
 
@@ -344,8 +351,52 @@ export const SessionModel = {
             console.error("Failed to deduct VAPI credits:", creditErr);
         }
 
-        const safeData = structuredData || {};
-        const summaryText = safeData.sessionSummary || summary || "Collaborative study session completed.";
+        let safeData = structuredData || {};
+
+        // If structuredData is missing summary/goal or if session ended forcefully, run Gemini on transcriptsArray!
+        if ((!safeData.sessionSummary || !safeData.weeklyGoal || summary.includes("forcefully ended")) && Array.isArray(transcriptsArray) && transcriptsArray.length > 0) {
+            try {
+                const geminiApiKey = process.env.GEMINI_API_KEY;
+                if (geminiApiKey) {
+                    const transcriptText = transcriptsArray.map((t: any) => `${t.role || t.sender || 'speaker'}: ${t.text || t.message || ''}`).join("\n");
+                    const prompt = `You are analyzing a student-AI voice study session on topic "${safeTopic}". Output ONLY valid JSON matching this schema:
+{
+  "sessionSummary": "2-3 concise sentence summary of key concepts discussed in transcript",
+  "weeklyGoal": "The specific goal mentioned by student or inferred for next session (e.g. 'Review CSS Flexbox')",
+  "knowledgeScore": 85,
+  "bigFivePersonality": { "openness": 80, "conscientiousness": 85, "extraversion": 75, "agreeableness": 80 },
+  "sessionInsight": "1 concise sentence observation about student's focus and learning style",
+  "learningPattern": "Visual",
+  "topicsCovered": ["${safeTopic}"]
+}
+
+Transcript:
+${transcriptText}`;
+
+                    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { response_mime_type: "application/json" }
+                        })
+                    });
+
+                    if (geminiRes.ok) {
+                        const geminiJson: any = await geminiRes.json();
+                        const rawText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (rawText) {
+                            const parsed = JSON.parse(rawText);
+                            safeData = { ...safeData, ...parsed };
+                        }
+                    }
+                }
+            } catch (aiErr) {
+                console.error("Gemini transcript parsing failed:", aiErr);
+            }
+        }
+
+        const summaryText = safeData.sessionSummary || (summary.includes("forcefully ended") ? `Voice study session on ${safeTopic} completed.` : summary) || "Collaborative study session completed.";
         const focusScore = safeData.groupFocusScore ?? safeData.focusScore ?? 85;
         const collaborationQuality = safeData.collaborationQuality ?? 85;
         const flashcards = Array.isArray(safeData.flashcards) ? safeData.flashcards : [];
@@ -363,8 +414,8 @@ export const SessionModel = {
             ? userAssessment.knowledgeScore 
             : (safeData.knowledgeScore ?? 85);
 
-        const weeklyGoal = actionItems.length > 0 ? actionItems.join("; ") : (safeData.weeklyGoal || "Review session concepts.");
-        const sessionInsight = userAssessment?.insight || safeData.sessionInsight || null;
+        const weeklyGoal = safeData.weeklyGoal || (actionItems.length > 0 ? actionItems.join("; ") : "Review session concepts.");
+        const sessionInsight = userAssessment?.insight || safeData.sessionInsight || "Demonstrated active curiosity and steady progress.";
 
         const priorPersonality = (profile.personality as any) || {};
         const newBigFive = (userAssessment?.bigFivePersonality || safeData.bigFivePersonality || {}) as Record<string, any>;
@@ -437,9 +488,45 @@ export const SessionModel = {
             }
         });
     
-        const exhibitedTraits = (typeof newBigFive === "object" && newBigFive !== null)
-            ? Object.entries(newBigFive).filter(([, v]) => typeof v === "number").map(([trait, v]) => `${trait}: ${v}`)
-            : [];
+        const rawBigFiveEntries = Object.entries(newBigFive).filter(([, v]) => typeof v === "number");
+        const exhibitedTraits = rawBigFiveEntries.length > 0
+            ? rawBigFiveEntries.map(([trait, v]) => `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${v}%`)
+            : ["Openness: 85%", "Conscientiousness: 80%", "Analytical: 85%", "Engaged: 90%"];
+
+        // --- CACHED IMAGE SUPPORT FOR VISUAL LEARNERS ---
+        let visualAsset: { topic: string; imageUrl: string; source: string } | null = null;
+        try {
+            const topicKeyword = safeTopic;
+            const subjectKeyword = profile.subjects?.[0] || "General Study";
+            const promptKeyword = encodeURIComponent(`${topicKeyword} ${subjectKeyword} concept diagram`);
+            const generatedUrl = `https://image.pollinations.ai/prompt/${promptKeyword}?width=800&height=400&nologo=true`;
+
+            const existingImg = await prisma.cachedImage.findFirst({
+                where: { topic: { equals: safeTopic, mode: 'insensitive' } }
+            });
+
+            if (existingImg) {
+                await prisma.cachedImage.update({
+                    where: { id: existingImg.id },
+                    data: { usageCount: { increment: 1 } }
+                }).catch(() => {});
+                visualAsset = { topic: safeTopic, imageUrl: existingImg.imageUrl, source: existingImg.source };
+            } else {
+                const newCached = await prisma.cachedImage.create({
+                    data: {
+                        topic: safeTopic,
+                        subject: subjectKeyword,
+                        imageUrl: generatedUrl,
+                        source: "pollinations",
+                        keywords: [safeTopic, subjectKeyword],
+                        usageCount: 1
+                    }
+                });
+                visualAsset = { topic: safeTopic, imageUrl: newCached.imageUrl, source: newCached.source };
+            }
+        } catch (imgErr) {
+            console.error("Failed to query/save CachedImage:", imgErr);
+        }
 
         const newSession = await prisma.session.create({
             data: {
@@ -455,12 +542,13 @@ export const SessionModel = {
                         transcriptUrl: JSON.stringify(transcriptsArray || []),
                         summary: summaryText,
                         topics: topics,
-                        participantMetrics: { focus: focusScore, collaborationQuality, participation: userAssessment?.participationLevel || "Active", insight: sessionInsight, assessments },
+                        participantMetrics: { focus: focusScore, collaborationQuality, participation: userAssessment?.participationLevel || "Active", insight: sessionInsight, assessments, visualAsset },
                         knowledgeDemonstrated: { score: knowledgeScore, strengths: [{ subject: safeTopic, proficiency: knowledgeScore }] },
                         profileUpdates: {
                             nextSteps: weeklyGoal,
-                            learningStyleHint: assessedPattern || "Adaptive",
-                            exhibitedTraits
+                            learningStyleHint: assessedPattern || (profile.learningStyle?.[0] || "Adaptive"),
+                            exhibitedTraits,
+                            visualAsset
                         },
                         flashcardsGenerated: flashcards
                     }
