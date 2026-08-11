@@ -5,17 +5,17 @@ import React, { useRef, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useInView } from 'framer-motion';
 
-const Spline = dynamic(() => import('@splinetool/react-spline'), { 
+const Spline = dynamic(() => import('@splinetool/react-spline'), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-transparent" /> 
+  loading: () => <div className="w-full h-full bg-transparent" />
 });
 
 function checkWebGLSupport(): boolean {
   if (typeof window === 'undefined') return false;
   try {
     const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl', { failIfMajorPerformanceCaveat: false }) || 
-               canvas.getContext('experimental-webgl');
+    const gl = canvas.getContext('webgl', { failIfMajorPerformanceCaveat: false }) ||
+      canvas.getContext('experimental-webgl');
     if (!gl) return false;
     if ('isContextLost' in gl && (gl as WebGLRenderingContext).isContextLost()) {
       return false;
@@ -106,15 +106,15 @@ export default function SplineScene() {
   }
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="w-full h-full [&>canvas]:w-full! [&>canvas]:h-full! [&_canvas]:w-full! [&_canvas]:h-full!"
     >
       <WebGLErrorBoundary fallback={<VideoFallback />} onError={() => setHasError(true)}>
         <Spline
           scene="https://prod.spline.design/yyrnSXM5GuJDvtAR/scene.splinecode"
           style={{ width: '100%', height: '100%' }}
-          onLoad={handleLoad} 
+          onLoad={handleLoad}
           onError={() => setHasError(true)}
         />
       </WebGLErrorBoundary>
