@@ -394,12 +394,18 @@ export default function SessionSummaryPage() {
 
               <div className="bg-white rounded-3xl border border-gray-200 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] p-6 space-y-6">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Exhibited Traits</h3>
-                  <div className="flex flex-wrap gap-2">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Behavioral & Personality Profile</h3>
+                  <div className="flex flex-wrap gap-2 mb-3">
                     {currentData.analytics.personalityTraits.map((trait: string, i: number) => (
-                      <span key={i} className="px-3.5 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-xs font-bold border border-gray-200">{trait}</span>
+                      <span key={i} className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold border border-purple-200">{trait}</span>
                     ))}
                   </div>
+                  {currentData.analytics.personalityReasoning && (
+                    <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-700 block mb-1">Session Personality Assessment</span>
+                      <p className="text-xs font-medium text-gray-600 leading-relaxed italic">&quot;{currentData.analytics.personalityReasoning}&quot;</p>
+                    </div>
+                  )}
                 </div>
 
                 <div>

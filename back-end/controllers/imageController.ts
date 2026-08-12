@@ -38,9 +38,14 @@ export const generateImage = async (req: Request, res: Response) => {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey) {
       try {
-        const polishInstruction = `You are an expert AI prompt engineer for educational image generation models (FLUX/Stable Diffusion).
-Given the user request below, output ONLY a clean, optimized 1-sentence prompt describing a professional vector diagram, visual graphic, or flowchart with clean layout, simple bold labels, and vibrant colors.
-Output ONLY the polished prompt string without quotes, markdown, or extra commentary.
+        const polishInstruction = `You are an expert AI prompt engineer for educational graphic design and visual diagrams.
+Given the student request or conversational prompt below, transform it into a 1-sentence prompt for a modern, flat-vector educational infographic diagram.
+Rules:
+1. Describe a clean 2D vector graphic with vibrant colored cards/blocks on a clean light background.
+2. Specify clear structural layout (e.g. "stacked horizontal boxes in top-to-bottom order", "2x2 grid layout", "3-stage horizontal process flowchart").
+3. Keep labels minimal, bold, and in plain English (e.g. DOCTYPE, HTML, HEAD, BODY).
+4. Avoid requesting long code snippets or nested paragraph text inside the image.
+5. Output ONLY the polished prompt string without quotes, markdown, or extra commentary.
 
 User Request: "${prompt}"`;
 
@@ -49,7 +54,7 @@ User Request: "${prompt}"`;
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: polishInstruction }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 100 }
+            generationConfig: { temperature: 0.2, maxOutputTokens: 120 }
           })
         });
 
@@ -57,7 +62,7 @@ User Request: "${prompt}"`;
           const geminiJson: any = await geminiRes.json();
           const polishedText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
           if (polishedText) {
-            finalPrompt = `High quality crisp educational diagram, clear vector graphic, readable labels: ${polishedText.replace(/["']/g, '')}`;
+            finalPrompt = `Modern flat vector educational infographic, clean studio graphic design, minimalist 2D vector, high contrast: ${polishedText.replace(/["']/g, '')}`;
             console.log("[ImageController] Polished Prompt:", finalPrompt);
           }
         }

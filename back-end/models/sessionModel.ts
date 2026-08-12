@@ -75,6 +75,7 @@ export const SessionModel = {
                     score: knowDem?.score || 85,
                     knowledgeStrengths: knowDem?.strengths || [{ subject: analysis?.topics?.[0] || "Core Concepts", proficiency: 85 }],
                     personalityTraits,
+                    personalityReasoning: profUpd?.personalityReasoning || profUpd?.reasoning || null,
                     learningStyle: profUpd?.learningStyleHint || (session.host.profile?.learningStyle?.[0] || "Adaptive"),
                     aiInsight: partMet?.insight || "Great focus and active engagement during this session."
                 }
@@ -574,6 +575,7 @@ export const SessionModel = {
                             nextSteps: weeklyGoal,
                             learningStyleHint: safeData.learningPattern || (profile.learningStyle?.[0] || "Adaptive"),
                             exhibitedTraits,
+                            personalityReasoning: safeData.personalityReasoning || null,
                             visualAsset,
                             visualAssets
                         },
