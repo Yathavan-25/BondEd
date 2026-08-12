@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Mic, Users, BookOpen, Brain, Target, 
   Sparkles, Clock, TrendingUp, CheckCircle2, 
-  MessageSquare, Zap, CalendarDays, Loader2, Layers
+  MessageSquare, Zap, CalendarDays, Loader2, Layers,
+  Maximize2, Download, X, Image as ImageIcon
 } from 'lucide-react'
 
 const POLL_INTERVAL_MS = 3000;
@@ -16,6 +17,7 @@ const POLL_INTERVAL_MS = 3000;
 export default function SessionSummaryPage() {
   const [activeTab, setActiveTab] = useState<'voice' | 'collaborative'>('voice')
   const [selectedSessionIndex, setSelectedSessionIndex] = useState(0)
+  const [lightboxSummaryImage, setLightboxSummaryImage] = useState<string | null>(null)
   
   const [data, setData] = useState<{ voice: any[], collaborative: any[] } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -295,7 +297,34 @@ export default function SessionSummaryPage() {
                 </div>
               </div>
 
-
+              {((currentData.lesson.visualAssets && currentData.lesson.visualAssets.length > 0) || currentData.lesson.visualAsset) && (
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] p-6 sm:p-8">
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
+                    <Sparkles className={`w-5 h-5 ${activeTab === 'voice' ? 'text-[#9C2FDF]' : 'text-[#1363CB]'}`} /> 
+                    Generated Visual Diagrams
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {(currentData.lesson.visualAssets && currentData.lesson.visualAssets.length > 0 
+                      ? currentData.lesson.visualAssets 
+                      : [currentData.lesson.visualAsset]
+                    ).map((imgUrl: string, idx: number) => (
+                      <div
+                        key={idx}
+                        onClick={() => setLightboxSummaryImage(imgUrl)}
+                        className="group relative rounded-2xl border border-gray-200 overflow-hidden cursor-pointer bg-gray-900 shadow-sm hover:shadow-md transition-all"
+                      >
+                        <img src={imgUrl} alt={`Visual Aid #${idx + 1}`} className="w-full h-48 object-contain bg-gray-950 group-hover:scale-102 transition-transform duration-300" />
+                        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
+                          <span className="text-xs font-bold text-white">Visual Aid #{idx + 1}</span>
+                          <span className="flex items-center gap-1 px-3 py-1 rounded-lg bg-white/90 text-gray-900 text-xs font-bold shadow-sm">
+                            <Maximize2 className="w-3.5 h-3.5" /> Expand
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {currentData.lesson.flashcards && currentData.lesson.flashcards.length > 0 && (
                 <div className="bg-white rounded-3xl border border-gray-200 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] p-6 sm:p-8">
@@ -320,17 +349,13 @@ export default function SessionSummaryPage() {
                 <div className="bg-white rounded-3xl border border-gray-200 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] p-6 sm:p-8">
                   <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6"><BookOpen className={`w-5 h-5 ${activeTab === 'voice' ? 'text-[#9C2FDF]' : 'text-[#1363CB]'}`} /> Session Transcript</h3>
                   <div className="flex-1 overflow-y-auto space-y-4 max-h-96 pr-2">
-                      {currentData.lesson.transcript.map((msg: any, i: number) => (
+                      {currentData.lesson.transcript.filter((msg: any) => msg.type !== 'image').map((msg: any, i: number) => (
                           <div key={i} className={`rounded-[16px] p-4 flex items-start gap-4 border ${msg.role === 'user' ? 'bg-gray-50 border-gray-100' : 'bg-linear-to-br from-indigo-50/70 to-purple-50/40 border-[#1363CB]/20'}`}>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 ${msg.role === 'user' ? 'bg-gray-800' : 'bg-linear-to-br from-[#1363CB] to-[#9C2FDF]'}`}>
                               {msg.role === 'user' ? <span className="text-xs font-bold">ME</span> : <Sparkles className="w-4 h-4" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              {msg.type === 'image' ? (
-                                <img src={msg.text} alt="Generated visual aid" className="w-full max-w-sm h-auto rounded-xl border border-gray-200/50 shadow-sm" />
-                              ) : (
-                                <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
-                              )}
+                              <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
                             </div>
                           </div>
                       ))}
@@ -348,7 +373,7 @@ export default function SessionSummaryPage() {
                     <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10"><Sparkles className="w-5 h-5 text-amber-300" /></div>
                     <h3 className="font-bold tracking-wide text-white">AI Profile Insight</h3>
                   </div>
-                  <p className="text-[15px] text-white/90 leading-relaxed font-medium">&quot;{currentData.analytics.aiInsight}&quot;</p>
+                  <p className="text-sm font-medium text-gray-300 leading-relaxed italic">{currentData.analytics.aiInsight}</p>
                 </div>
                 <div className={`absolute -top-20 -right-20 w-48 h-48 rounded-full blur-3xl pointer-events-none ${activeTab === 'voice' ? 'bg-[#9C2FDF]/40' : 'bg-[#1363CB]/40'}`}></div>
               </div>

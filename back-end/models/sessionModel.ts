@@ -52,7 +52,8 @@ export const SessionModel = {
                 ? rawTraits
                 : ["Openness", "Conscientiousness", "Analytical", "Engaged"];
 
-            const visualAsset = profUpd?.visualAsset || partMet?.visualAsset || null;
+            const visualAssets = profUpd?.visualAssets || (profUpd?.visualAsset ? [profUpd.visualAsset] : (parsedTranscript.filter((t: any) => t.type === 'image').map((t: any) => t.text)));
+            const visualAsset = profUpd?.visualAsset || partMet?.visualAsset || (visualAssets.length > 0 ? visualAssets[visualAssets.length - 1] : null);
 
             const formattedSession = {
                 id: session.id,
@@ -67,7 +68,8 @@ export const SessionModel = {
                     nextSteps: profUpd?.nextSteps || "Review notes before next session.",
                     flashcards: analysis?.flashcardsGenerated || [],
                     transcript: parsedTranscript,
-                    visualAsset
+                    visualAsset,
+                    visualAssets
                 },
                 analytics: {
                     score: knowDem?.score || 85,
@@ -506,6 +508,14 @@ export const SessionModel = {
             ? rawBigFiveEntries.map(([trait, v]) => `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${v}%`)
             : [];
 
+        const visualAssetsFromTranscripts = Array.isArray(transcriptsArray)
+            ? transcriptsArray.filter((t: any) => t.type === 'image').map((t: any) => t.text)
+            : [];
+        const visualAssets = (Array.isArray(safeData.visualAssets) && safeData.visualAssets.length > 0)
+            ? safeData.visualAssets
+            : visualAssetsFromTranscripts;
+        const visualAsset = visualAssets.length > 0 ? visualAssets[visualAssets.length - 1] : null;
+
         const newSession = await prisma.session.create({
             data: {
                 hostId: userId,
@@ -533,7 +543,9 @@ export const SessionModel = {
                         profileUpdates: {
                             nextSteps: weeklyGoal,
                             learningStyleHint: safeData.learningPattern || (profile.learningStyle?.[0] || "Adaptive"),
-                            exhibitedTraits
+                            exhibitedTraits,
+                            visualAsset,
+                            visualAssets
                         },
                         flashcardsGenerated: flashcards
                     }

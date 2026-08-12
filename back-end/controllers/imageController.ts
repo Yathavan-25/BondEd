@@ -32,9 +32,10 @@ export const generateImage = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Not in cache -> Call Pollinations Open GET API (100% free, no API key required)
+    // 2. Not in cache -> Call Pollinations FLUX Engine
     const seed = Math.floor(Math.random() * 1000000);
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=450&nologo=true&seed=${seed}`;
+    const enhancedPrompt = `High quality crisp educational diagram, clear vector flowchart, readable text labels, HD: ${prompt}`;
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?model=flux&width=1280&height=720&nologo=true&seed=${seed}`;
 
     const response = await fetch(pollinationsUrl);
 

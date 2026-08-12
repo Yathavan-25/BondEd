@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Vapi from "@vapi-ai/web";
-import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen, AlertTriangle } from "lucide-react";
+import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen, AlertTriangle, Image as ImageIcon, Maximize2, Download, X } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
 
@@ -17,6 +17,7 @@ const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_PERSONALIZED_ASSISTANT_ID || "
 
 type AssistantState = "idle" | "loading" | "listening" | "paused" | "stopped" | "analyzing";
 type TranscriptMessage = { role: "user" | "ai"; text: string; type?: "text" | "image" };
+type VisualAidItem = { id: string; url: string; prompt?: string };
 
 export default function VoiceAssistantPage() {
   const params = useParams<{ id: string }>();
@@ -39,6 +40,11 @@ export default function VoiceAssistantPage() {
   const [availableMinutes, setAvailableMinutes] = useState<number>(0);
   const [timeWarning, setTimeWarning] = useState<string | null>(null);
   const [generatingImage, setGeneratingImage] = useState<boolean>(false);
+
+  // Visual aids panel and fullscreen lightbox
+  const [visualAids, setVisualAids] = useState<VisualAidItem[]>([]);
+  const [activeVisualIndex, setActiveVisualIndex] = useState<number>(0);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const vapiRef = useRef<any>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
@@ -125,13 +131,17 @@ export default function VoiceAssistantPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setTranscripts((prev) => [...prev, { role: "ai", text: data.imageUrl, type: "image" }]);
+        const newItem: VisualAidItem = { id: Math.random().toString(36).substring(2, 9), url: data.imageUrl, prompt };
+        setVisualAids((prev) => {
+          const next = [...prev, newItem];
+          setActiveVisualIndex(next.length - 1);
+          return next;
+        });
+        toast.success("New visual aid generated!");
       } else {
         const errData = await res.json().catch(() => ({ error: 'Unknown error' }));
         console.error("Image generation failed:", errData);
         toast.error("Couldn't generate image right now.");
-        // Add a fallback message in transcript so user knows
-        setTranscripts((prev) => [...prev, { role: "ai", text: "(Image generation failed — check server logs for details.)", type: "text" }]);
       }
     } catch (err) {
       console.error("Failed to generate visual aid:", err);
@@ -158,6 +168,9 @@ export default function VoiceAssistantPage() {
     const startTime = sessionStartRef.current?.toISOString() || new Date().toISOString();
     const endTime = new Date().toISOString();
 
+    const imageTranscripts = visualAids.map((v) => ({ role: "ai", text: v.url, type: "image" }));
+    const mergedTranscripts = [...transcriptsRef.current, ...imageTranscripts];
+
     try {
       const token = await getAuth().currentUser?.getIdToken();
       const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
@@ -169,7 +182,7 @@ export default function VoiceAssistantPage() {
           studentId,
           callId,
           selectedTopic: finalTopic,
-          transcripts: transcriptsRef.current,
+          transcripts: mergedTranscripts,
           structuredData,
           summary,
           startTime,
@@ -505,11 +518,7 @@ export default function VoiceAssistantPage() {
                           {msg.role === 'user' ? <span className="text-xs font-bold">ME</span> : <Sparkles className="w-4 h-4" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          {msg.type === "image" ? (
-                            <img src={msg.text} alt="Generated visual aid" className="w-full max-w-sm h-auto rounded-xl border border-gray-200/50 shadow-sm" />
-                          ) : (
-                            <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
-                          )}
+                          <p className={`text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'text-gray-800' : 'text-[#1363CB]'}`}>{msg.text}</p>
                         </div>
                       </motion.div>
                     ))
@@ -522,7 +531,7 @@ export default function VoiceAssistantPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-5 h-5 text-[#9C2FDF] animate-spin" />
-                      <p className="text-sm font-bold text-[#1363CB] animate-pulse">Generating visual aid...</p>
+                      <p className="text-sm font-bold text-[#1363CB] animate-pulse">Generating visual aid diagram...</p>
                     </div>
                   </motion.div>
                 )}
@@ -541,6 +550,121 @@ export default function VoiceAssistantPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Full-Width Visual Aid Panel (Spans across Voice Assistant and Transcript) */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full bg-white rounded-[28px] border border-gray-200/80 shadow-[0_8px_40px_-12px_rgba(19,99,203,0.12)] p-6 md:p-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#9C2FDF]" />
+              Generated Visual Aids
+              {visualAids.length > 0 && <span className="ml-2 text-xs font-extrabold bg-[#9C2FDF]/10 text-[#9C2FDF] px-2.5 py-1 rounded-full">{visualAids.length}</span>}
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">High-definition diagrams generated live during your tutoring session.</p>
+          </div>
+          {visualAids.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500">Visual {activeVisualIndex + 1} of {visualAids.length}</span>
+            </div>
+          )}
+        </div>
+
+        {visualAids.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl bg-gray-50/50 border border-dashed border-gray-200 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-[#9C2FDF]/10 flex items-center justify-center text-[#9C2FDF] mb-3">
+              <ImageIcon className="w-7 h-7" />
+            </div>
+            <p className="text-base font-bold text-gray-800 mb-1">No Visual Aids Generated Yet</p>
+            <p className="text-xs text-gray-500 max-w-md">Ask BondEd AI to &quot;show a visual diagram&quot; or &quot;generate an image&quot; at any time during your conversation, and HD diagrams will pin here for your study session.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Active Featured Image Card */}
+            <div className="relative rounded-2xl border border-gray-200/80 bg-gray-900 overflow-hidden group shadow-lg">
+              <img
+                src={visualAids[activeVisualIndex]?.url}
+                alt={visualAids[activeVisualIndex]?.prompt || "Visual Aid"}
+                className="w-full max-h-[500px] object-contain mx-auto transition-transform duration-300 group-hover:scale-[1.01]"
+              />
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-6">
+                <p className="text-sm font-semibold text-white truncate max-w-lg">{visualAids[activeVisualIndex]?.prompt || "Generated Educational Diagram"}</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setLightboxImage(visualAids[activeVisualIndex]?.url)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/90 hover:bg-white text-gray-900 font-bold text-xs shadow-md transition-colors cursor-pointer"
+                  >
+                    <Maximize2 className="w-4 h-4" /> Full Resolution
+                  </button>
+                  <a
+                    href={visualAids[activeVisualIndex]?.url}
+                    download="visual-aid.png"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1363CB] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition-colors"
+                  >
+                    <Download className="w-4 h-4" /> Download
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Gallery Thumbnails Selector for Previous Images */}
+            {visualAids.length > 1 && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Previous Visual Aids in this session:</p>
+                <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-1">
+                  {visualAids.map((item, index) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveVisualIndex(index)}
+                      className={`relative rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${activeVisualIndex === index ? 'border-[#9C2FDF] ring-2 ring-[#9C2FDF]/30 scale-105' : 'border-gray-200 opacity-70 hover:opacity-100'}`}
+                    >
+                      <img src={item.url} alt="Thumbnail" className="w-28 h-20 object-cover" />
+                      <span className="absolute bottom-1 right-1 text-[10px] font-extrabold bg-black/70 text-white px-1.5 py-0.5 rounded">#{index + 1}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Fullscreen Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
+            onClick={() => setLightboxImage(null)}
+          >
+            <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+              <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
+                <a
+                  href={lightboxImage}
+                  download="visual-aid.png"
+                  className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur transition-colors"
+                  title="Download Image"
+                >
+                  <Download className="w-5 h-5" />
+                </a>
+                <button
+                  onClick={() => setLightboxImage(null)}
+                  className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur transition-colors cursor-pointer"
+                  title="Close Lightbox"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <img
+                src={lightboxImage}
+                alt="Full resolution visual aid"
+                className="max-w-full max-h-[85vh] object-contain rounded-2xl border border-white/10 shadow-2xl"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
