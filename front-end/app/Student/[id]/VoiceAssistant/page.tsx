@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Vapi from "@vapi-ai/web";
-import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen, AlertTriangle, Image as ImageIcon, Maximize2, Download, X } from "lucide-react";
+import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen, AlertTriangle, Image as ImageIcon, Maximize2, Download, X, PhoneOff } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
 
@@ -484,22 +484,42 @@ export default function VoiceAssistantPage() {
             </div>
 
             <div className="flex flex-col items-center gap-4 mt-8">
-              <div className="flex items-center gap-4">
-                <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} disabled={assistantState === "idle" || assistantState === "stopped" || assistantState === "loading" || assistantState === "analyzing"} onClick={() => setAssistantState("paused")} className="w-14 h-14 rounded-full bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition-colors shadow-sm border border-red-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Square className="w-5 h-5 fill-current" />
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} onClick={toggleStart} disabled={assistantState === "stopped" || assistantState === "analyzing"} className="relative w-20 h-20 rounded-full bg-linear-to-br from-gray-900 to-gray-700 text-white flex items-center justify-center transition-colors shadow-lg shadow-gray-900/30 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {assistantState === "listening" && <motion.span className={`absolute inset-0 rounded-full border-2 ${minutesRemaining <= 2 ? 'border-red-500' : 'border-[#9C2FDF]'}`} animate={{ scale: [1, 1.18], opacity: [0.7, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} />}
-                  {assistantState === "listening" ? <Pause className="w-7 h-7" /> : <Mic className="w-7 h-7" />}
-                </motion.button>
-              </div>
-
-              {assistantState !== "idle" && assistantState !== "stopped" && assistantState !== "loading" && assistantState !== "analyzing" && (
-                <motion.button initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} onClick={stopSession} className="mt-1 px-6 py-2.5 rounded-[12px] bg-red-600 hover:bg-red-700 text-white text-sm font-bold shadow-sm transition-colors">
-                  End Conversation
+              {(assistantState === "idle" || assistantState === "stopped") && (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={toggleStart}
+                  className="px-8 py-4 rounded-2xl bg-linear-to-r from-[#1363CB] to-[#9C2FDF] text-white font-bold text-base shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all flex items-center gap-3 cursor-pointer"
+                >
+                  <Mic className="w-5 h-5" /> Start Voice Session
                 </motion.button>
               )}
-              {assistantState === "analyzing" && <p className="text-sm font-bold text-[#1363CB] mt-2 animate-pulse">Wrapping up your session...</p>}
+
+              {assistantState === "loading" && (
+                <button
+                  disabled
+                  className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-400 font-bold text-base flex items-center gap-3 cursor-not-allowed border border-gray-200"
+                >
+                  <Loader2 className="w-5 h-5 animate-spin text-[#9C2FDF]" /> Connecting to AI...
+                </button>
+              )}
+
+              {(assistantState === "listening" || (assistantState as string) === "speaking" || assistantState === "paused") && (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={stopSession}
+                  className="px-8 py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-base shadow-lg shadow-red-500/20 transition-all flex items-center gap-3 cursor-pointer"
+                >
+                  <PhoneOff className="w-5 h-5" /> End Session
+                </motion.button>
+              )}
+
+              {assistantState === "analyzing" && (
+                <div className="px-8 py-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-[#1363CB] font-bold text-base flex items-center gap-3 animate-pulse">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#1363CB]" /> Wrapping up & saving session...
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

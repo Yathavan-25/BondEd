@@ -76,7 +76,9 @@ export const SessionModel = {
                     knowledgeStrengths: knowDem?.strengths || [{ subject: analysis?.topics?.[0] || "Core Concepts", proficiency: 85 }],
                     personalityTraits,
                     personalityReasoning: profUpd?.personalityReasoning || profUpd?.reasoning || null,
+                    personalityBreakdown: profUpd?.personalityBreakdown || (session.host.profile?.personality as any) || null,
                     learningStyle: profUpd?.learningStyleHint || (session.host.profile?.learningStyle?.[0] || "Adaptive"),
+                    learningStyleReasoning: profUpd?.learningStyleReasoning || null,
                     aiInsight: partMet?.insight || "Great focus and active engagement during this session."
                 }
             };
@@ -434,21 +436,49 @@ export const SessionModel = {
         const weeklyGoal = safeData.weeklyGoal || "Review session concepts.";
         const flashcards = Array.isArray(safeData.flashcards) ? safeData.flashcards : [];
         const sessionInsight = safeData.sessionInsight || null;
-        const newBigFive = (safeData.bigFivePersonality || {}) as Record<string, any>;
-        const topics = Array.isArray(safeData.topicsCovered) && safeData.topicsCovered.length > 0
-            ? safeData.topicsCovered
-            : [safeTopic];
+        const rawBigFive = (safeData.bigFivePersonality || {}) as Record<string, any>;
+        const traitKeys = ["openness", "conscientiousness", "extraversion", "agreeableness"] as const;
+        
+        const personalityBreakdown: Record<string, { score: number; reasoning: string }> = {};
+        const newBigFiveScores: Record<string, number> = {};
+
+        traitKeys.forEach((trait) => {
+            const traitVal = rawBigFive[trait];
+            let score = 70;
+            let reasoning = "";
+
+            if (typeof traitVal === "object" && traitVal !== null) {
+                score = typeof traitVal.score === "number" ? traitVal.score : 70;
+                reasoning = traitVal.reasoning || safeData.personalityReasoning || "";
+            } else if (typeof traitVal === "number") {
+                score = traitVal;
+                reasoning = rawBigFive[`${trait}Reasoning`] || safeData.personalityReasoning || "";
+            } else {
+                score = 70;
+                reasoning = safeData.personalityReasoning || "";
+            }
+
+            personalityBreakdown[trait] = { score, reasoning };
+            newBigFiveScores[trait] = score;
+        });
 
         const priorPersonality = (profile.personality as any) || {};
         const mergedPersonality: Record<string, any> = { ...priorPersonality };
 
-        (["openness", "conscientiousness", "extraversion", "agreeableness"] as const).forEach((trait) => {
-            if (typeof newBigFive[trait] === "number") {
-                const prior = typeof priorPersonality[trait] === "number" ? priorPersonality[trait] : newBigFive[trait];
-                mergedPersonality[trait] = Math.round((prior + newBigFive[trait]) / 2);
-            }
+        traitKeys.forEach((trait) => {
+            const newScore = newBigFiveScores[trait];
+            const priorScore = typeof priorPersonality[trait] === "number" 
+                ? priorPersonality[trait] 
+                : (priorPersonality[trait]?.score ?? newScore);
+
+            const updatedScore = Math.round(priorScore * 0.7 + newScore * 0.3);
+            mergedPersonality[trait] = {
+                score: updatedScore,
+                reasoning: personalityBreakdown[trait].reasoning || priorPersonality[trait]?.reasoning || ""
+            };
         });
-        if (safeData.personalityReasoning) mergedPersonality.reasoning = safeData.personalityReasoning;
+
+        mergedPersonality.overallReasoning = safeData.personalityReasoning || priorPersonality.overallReasoning || "";
         mergedPersonality.updatedAt = new Date().toISOString();
 
         let newLearningStyle = profile.learningStyle;
@@ -534,10 +564,10 @@ export const SessionModel = {
             }
         });
 
-        const rawBigFiveEntries = Object.entries(newBigFive).filter(([, v]) => typeof v === "number");
-        const exhibitedTraits = rawBigFiveEntries.length > 0
-            ? rawBigFiveEntries.map(([trait, v]) => `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${v}%`)
-            : [];
+        const exhibitedTraits = traitKeys.map((trait) => {
+            const data = personalityBreakdown[trait];
+            return `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${data.score}%`;
+        });
 
         const visualAssetsFromTranscripts = Array.isArray(transcriptsArray)
             ? transcriptsArray.filter((t: any) => t.type === 'image').map((t: any) => t.text)
@@ -574,8 +604,10 @@ export const SessionModel = {
                         profileUpdates: {
                             nextSteps: weeklyGoal,
                             learningStyleHint: safeData.learningPattern || (profile.learningStyle?.[0] || "Adaptive"),
+                            learningStyleReasoning: safeData.learningStyleReasoning || null,
                             exhibitedTraits,
                             personalityReasoning: safeData.personalityReasoning || null,
+                            personalityBreakdown,
                             visualAsset,
                             visualAssets
                         },

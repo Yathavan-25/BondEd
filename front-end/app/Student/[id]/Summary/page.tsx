@@ -394,15 +394,42 @@ export default function SessionSummaryPage() {
 
               <div className="bg-white rounded-3xl border border-gray-200 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] p-6 space-y-6">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Behavioral & Personality Profile</h3>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {currentData.analytics.personalityTraits.map((trait: string, i: number) => (
-                      <span key={i} className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold border border-purple-200">{trait}</span>
-                    ))}
-                  </div>
-                  {currentData.analytics.personalityReasoning && (
-                    <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-700 block mb-1">Session Personality Assessment</span>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Behavioral & Personality Profile</h3>
+                  
+                  {currentData.analytics.personalityBreakdown ? (
+                    <div className="space-y-3">
+                      {Object.entries(currentData.analytics.personalityBreakdown).map(([traitKey, data]: [string, any]) => {
+                        const traitName = traitKey.charAt(0).toUpperCase() + traitKey.slice(1);
+                        const score = typeof data === 'object' && data !== null ? (data.score ?? 70) : (typeof data === 'number' ? data : 70);
+                        const reasoning = typeof data === 'object' && data !== null ? data.reasoning : '';
+                        
+                        return (
+                          <div key={traitKey} className="p-3 bg-gray-50 rounded-2xl border border-gray-100 space-y-1.5">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="font-bold text-gray-900">{traitName}</span>
+                              <span className="font-extrabold text-[#9C2FDF]">{score}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-gray-200/60 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-[#1363CB] to-[#9C2FDF] rounded-full" style={{ width: `${score}%` }} />
+                            </div>
+                            {reasoning && (
+                              <p className="text-[11px] font-medium text-gray-500 leading-snug italic pt-0.5">&quot;{reasoning}&quot;</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {currentData.analytics.personalityTraits.map((trait: string, i: number) => (
+                        <span key={i} className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold border border-purple-200">{trait}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {currentData.analytics.personalityReasoning && !currentData.analytics.personalityBreakdown && (
+                    <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 mt-3">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-700 block mb-1">Session Assessment</span>
                       <p className="text-xs font-medium text-gray-600 leading-relaxed italic">&quot;{currentData.analytics.personalityReasoning}&quot;</p>
                     </div>
                   )}
@@ -410,10 +437,15 @@ export default function SessionSummaryPage() {
 
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-gray-400" /> Learning Mode</h3>
-                  <div className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl inline-flex items-center gap-2.5">
+                  <div className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl inline-flex items-center gap-2.5 mb-2">
                      <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span>
                      <span className="text-sm font-bold text-gray-800">{currentData.analytics.learningStyle}</span>
                   </div>
+                  {currentData.analytics.learningStyleReasoning && (
+                    <p className="text-xs font-medium text-gray-500 leading-relaxed italic bg-gray-50/80 p-3 rounded-xl border border-gray-200/60 mt-1">
+                      &quot;{currentData.analytics.learningStyleReasoning}&quot;
+                    </p>
+                  )}
                 </div>
               </div>
 
