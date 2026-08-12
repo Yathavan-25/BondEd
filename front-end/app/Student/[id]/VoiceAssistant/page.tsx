@@ -11,7 +11,7 @@ import Vapi from "@vapi-ai/web";
 import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen, AlertTriangle, Image as ImageIcon, Maximize2, Download, X, PhoneOff } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
-
+import MermaidDiagram from "@/components/MermaidDiagram";
 const VAPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "";
 const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_PERSONALIZED_ASSISTANT_ID || "";
 
@@ -596,28 +596,38 @@ export default function VoiceAssistantPage() {
         ) : (
           <div className="space-y-6">
             {/* Active Featured Image Card */}
-            <div className="relative rounded-2xl border border-gray-200/80 bg-gray-900 overflow-hidden group shadow-lg">
-              <img
-                src={visualAids[activeVisualIndex]?.url}
-                alt={visualAids[activeVisualIndex]?.prompt || "Visual Aid"}
-                className="w-full max-h-[500px] object-contain mx-auto transition-transform duration-300 group-hover:scale-[1.01]"
-              />
+            <div className="relative rounded-2xl border border-gray-200/80 bg-gray-900 overflow-hidden group shadow-lg min-h-[400px]">
+              {visualAids[activeVisualIndex]?.url.startsWith('mermaid:') ? (
+                <div className="w-full h-full p-4">
+                  <MermaidDiagram chart={visualAids[activeVisualIndex].url.substring(8)} />
+                </div>
+              ) : (
+                <img
+                  src={visualAids[activeVisualIndex]?.url}
+                  alt={visualAids[activeVisualIndex]?.prompt || "Visual Aid"}
+                  className="w-full max-h-[500px] object-contain mx-auto transition-transform duration-300 group-hover:scale-[1.01]"
+                />
+              )}
               <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-6">
                 <p className="text-sm font-semibold text-white truncate max-w-lg">{visualAids[activeVisualIndex]?.prompt || "Generated Educational Diagram"}</p>
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setLightboxImage(visualAids[activeVisualIndex]?.url)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/90 hover:bg-white text-gray-900 font-bold text-xs shadow-md transition-colors cursor-pointer"
-                  >
-                    <Maximize2 className="w-4 h-4" /> Full Resolution
-                  </button>
-                  <a
-                    href={visualAids[activeVisualIndex]?.url}
-                    download="visual-aid.png"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1363CB] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition-colors"
-                  >
-                    <Download className="w-4 h-4" /> Download
-                  </a>
+                  {!visualAids[activeVisualIndex]?.url.startsWith('mermaid:') && (
+                    <button
+                      onClick={() => setLightboxImage(visualAids[activeVisualIndex]?.url)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/90 hover:bg-white text-gray-900 font-bold text-xs shadow-md transition-colors cursor-pointer"
+                    >
+                      <Maximize2 className="w-4 h-4" /> Full Resolution
+                    </button>
+                  )}
+                  {!visualAids[activeVisualIndex]?.url.startsWith('mermaid:') && (
+                    <a
+                      href={visualAids[activeVisualIndex]?.url}
+                      download="visual-aid.png"
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1363CB] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition-colors"
+                    >
+                      <Download className="w-4 h-4" /> Download
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -631,9 +641,13 @@ export default function VoiceAssistantPage() {
                     <button
                       key={item.id}
                       onClick={() => setActiveVisualIndex(index)}
-                      className={`relative rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${activeVisualIndex === index ? 'border-[#9C2FDF] ring-2 ring-[#9C2FDF]/30 scale-105' : 'border-gray-200 opacity-70 hover:opacity-100'}`}
+                      className={`relative rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer bg-white ${activeVisualIndex === index ? 'border-[#9C2FDF] ring-2 ring-[#9C2FDF]/30 scale-105' : 'border-gray-200 opacity-70 hover:opacity-100'}`}
                     >
-                      <img src={item.url} alt="Thumbnail" className="w-28 h-20 object-cover" />
+                      {item.url.startsWith('mermaid:') ? (
+                        <div className="w-28 h-20 flex items-center justify-center bg-gray-50 text-gray-400 text-xs font-bold">Mermaid Diagram</div>
+                      ) : (
+                        <img src={item.url} alt="Thumbnail" className="w-28 h-20 object-cover" />
+                      )}
                       <span className="absolute bottom-1 right-1 text-[10px] font-extrabold bg-black/70 text-white px-1.5 py-0.5 rounded">#{index + 1}</span>
                     </button>
                   ))}

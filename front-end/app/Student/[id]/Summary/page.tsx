@@ -11,6 +11,7 @@ import {
   MessageSquare, Zap, CalendarDays, Loader2, Layers,
   Maximize2, Download, X, Image as ImageIcon
 } from 'lucide-react'
+import MermaidDiagram from '@/components/MermaidDiagram'
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -310,16 +311,26 @@ export default function SessionSummaryPage() {
                     ).map((imgUrl: string, idx: number) => (
                       <div
                         key={idx}
-                        onClick={() => setLightboxSummaryImage(imgUrl)}
-                        className="group relative rounded-2xl border border-gray-200 overflow-hidden cursor-pointer bg-gray-900 shadow-sm hover:shadow-md transition-all"
+                        onClick={() => {
+                          if (!imgUrl.startsWith('mermaid:')) setLightboxSummaryImage(imgUrl);
+                        }}
+                        className={`group relative rounded-2xl border border-gray-200 overflow-hidden ${!imgUrl.startsWith('mermaid:') ? 'cursor-pointer bg-gray-900' : 'bg-white min-h-[250px]'} shadow-sm hover:shadow-md transition-all flex items-center justify-center`}
                       >
-                        <img src={imgUrl} alt={`Visual Aid #${idx + 1}`} className="w-full h-48 object-contain bg-gray-950 group-hover:scale-102 transition-transform duration-300" />
-                        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
-                          <span className="text-xs font-bold text-white">Visual Aid #{idx + 1}</span>
-                          <span className="flex items-center gap-1 px-3 py-1 rounded-lg bg-white/90 text-gray-900 text-xs font-bold shadow-sm">
-                            <Maximize2 className="w-3.5 h-3.5" /> Expand
-                          </span>
-                        </div>
+                        {imgUrl.startsWith('mermaid:') ? (
+                          <div className="w-full h-full p-4 pointer-events-none">
+                            <MermaidDiagram chart={imgUrl.substring(8)} />
+                          </div>
+                        ) : (
+                          <>
+                            <img src={imgUrl} alt={`Visual Aid #${idx + 1}`} className="w-full h-48 object-contain bg-gray-950 group-hover:scale-102 transition-transform duration-300" />
+                            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
+                              <span className="text-xs font-bold text-white">Visual Aid #{idx + 1}</span>
+                              <span className="flex items-center gap-1 px-3 py-1 rounded-lg bg-white/90 text-gray-900 text-xs font-bold shadow-sm">
+                                <Maximize2 className="w-3.5 h-3.5" /> Expand
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>

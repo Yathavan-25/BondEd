@@ -42,28 +42,25 @@ export const generateImage = async (req: Request, res: Response) => {
 
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    // 3. GEMINI VECTOR ENGINE: Generate 100% crisp vector SVG graphics for educational diagrams/schematics/anatomy
+    // 3. GEMINI VECTOR ENGINE: Generate 100% crisp educational diagrams using Mermaid.js
     if (geminiKey && !isPhotoRequest) {
       try {
-        console.log("[ImageController] Using Gemini Vector Engine for SVG graphic generation...");
-        const svgSystemInstruction = `You are a master vector graphic illustrator and educational diagram designer.
-Generate clean, valid, standalone 16:9 widescreen SVG code (viewBox="0 0 1280 720" width="1280" height="720") illustrating the student's request.
+        console.log("[ImageController] Using Gemini Vector Engine for Mermaid graphic generation...");
+        const mermaidSystemInstruction = `You are a master educational diagram designer.
+Generate clean, valid Mermaid.js diagram code illustrating the student's request.
 
 Rules:
-1. DESIGN & STYLE:
-   - Use a modern flat vector design with crisp container cards on a clean background.
-   - Determine an appropriate and aesthetically pleasing color palette dynamically based on the subject matter (e.g., tech-blue for computer science, green/earth tones for biology, warm colors for history). Do not use random hardcoded colors.
-   - Draw rounded rectangular blocks (<rect rx="12">), container cards, pointer lines/arrows (<path d="..." stroke-width="3">), or biological/abstract shapes (<path>).
-2. TEXT & LABELS:
-   - Include clear, bold, highly legible English labels using <text> elements with clean sans-serif fonts.
-   - For Computer Science: draw container boxes representing elements/code blocks with clear text callouts.
-   - For Biology/Anatomy: draw labeled vector organs/cells/structures with pointer lines and bold text names.
-   - For Math/Physics/Flowcharts: draw labeled step boxes and arrows.
-   - For Abstract Concepts (e.g., "game mechanics", "learning strategies"): generate a conceptual flowchart or diagram with related visual icons, connected boxes, and descriptive text placeholders illustrating the concept.
+1. DIAGRAM TYPE:
+   - Use an appropriate diagram type: 'graph TD' or 'graph LR' (flowcharts) for most processes, 'mindmap' for brainstorming or related concepts, 'classDiagram' for object-oriented topics, 'stateDiagram-v2' for state machines, or 'sequenceDiagram' for interactions.
+   - For Abstract Concepts (e.g., "game mechanics", "learning strategies"): generate a conceptual flowchart or mindmap with connected boxes and descriptive text.
+   - For HTML/CSS structure: use a flowchart (graph) showing the nested structure and connections.
+2. DESIGN & LABELS:
+   - Include clear, highly legible English labels.
+   - Ensure syntax is 100% valid Mermaid code. Do not use unescaped special characters in node text unless properly quoted.
 3. OUTPUT FORMAT (CRITICAL):
-   - You MUST output ONLY valid raw SVG code starting with <svg> and ending with </svg>.
+   - You MUST output ONLY valid raw Mermaid code.
    - NEVER output conversational text, explanations, or refusals.
-   - Do NOT include markdown code fences (\`\`\`xml or \`\`\`svg), HTML wrappers, or any conversational text.
+   - Do NOT include markdown code fences (\`\`\`mermaid or \`\`\`), HTML wrappers, or any conversational text. Just the pure mermaid syntax starting with the graph type.
 
 User Request: "${prompt}"`;
 
@@ -71,7 +68,7 @@ User Request: "${prompt}"`;
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: svgSystemInstruction }] }],
+            contents: [{ parts: [{ text: mermaidSystemInstruction }] }],
             generationConfig: { temperature: 0.2, maxOutputTokens: 3000 }
           })
         });
@@ -81,15 +78,12 @@ User Request: "${prompt}"`;
           let rawText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
           
           // Clean backticks or wrappers if present
-          rawText = rawText.replace(/^```(xml|svg)?/i, '').replace(/```$/i, '').trim();
+          rawText = rawText.replace(/^```(mermaid)?/i, '').replace(/```$/i, '').trim();
           
-          const svgMatch = rawText.match(/<svg[\s\S]*<\/svg>/i);
-          if (svgMatch) {
-            const svgContent = svgMatch[0];
-            const base64Svg = Buffer.from(svgContent).toString('base64');
-            const dataUrl = `data:image/svg+xml;base64,${base64Svg}`;
+          if (rawText && (rawText.startsWith('graph') || rawText.startsWith('mindmap') || rawText.startsWith('stateDiagram') || rawText.startsWith('sequenceDiagram') || rawText.startsWith('classDiagram') || rawText.startsWith('pie') || rawText.startsWith('gantt') || rawText.startsWith('erDiagram'))) {
+            const dataUrl = `mermaid:${rawText}`;
 
-            console.log("[ImageController] Gemini Vector SVG generated successfully!");
+            console.log("[ImageController] Gemini Vector Mermaid generated successfully!");
 
             // Save to Cache
             await prisma.cachedImage.create({
@@ -97,7 +91,7 @@ User Request: "${prompt}"`;
                 topic,
                 subject,
                 imageUrl: dataUrl,
-                source: 'gemini-svg',
+                source: 'gemini-mermaid',
                 keywords: [prompt.toLowerCase().trim()]
               }
             });
@@ -108,8 +102,8 @@ User Request: "${prompt}"`;
             });
           }
         }
-      } catch (svgErr) {
-        console.error("[ImageController] Gemini SVG Engine failed, falling back to Pollinations:", svgErr);
+      } catch (mermaidErr) {
+        console.error("[ImageController] Gemini Mermaid Engine failed, falling back to Pollinations:", mermaidErr);
       }
     }
 
