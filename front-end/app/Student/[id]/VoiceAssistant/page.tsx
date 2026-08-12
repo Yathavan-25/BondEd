@@ -43,6 +43,7 @@ export default function VoiceAssistantPage() {
 
   // Visual aids panel and fullscreen lightbox
   const [visualAids, setVisualAids] = useState<VisualAidItem[]>([]);
+  const visualAidsRef = useRef<VisualAidItem[]>([]);
   const [activeVisualIndex, setActiveVisualIndex] = useState<number>(0);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
@@ -169,7 +170,7 @@ export default function VoiceAssistantPage() {
     const startTime = sessionStartRef.current?.toISOString() || new Date().toISOString();
     const endTime = new Date().toISOString();
 
-    const imageTranscripts = visualAidsRef.current.map((v) => ({ role: "ai", text: v.url, type: "image" }));
+    const imageTranscripts = visualAidsRef.current.map((v: VisualAidItem) => ({ role: "ai" as const, text: v.url, type: "image" as const }));
     const mergedTranscripts = [...transcriptsRef.current, ...imageTranscripts];
 
     try {
