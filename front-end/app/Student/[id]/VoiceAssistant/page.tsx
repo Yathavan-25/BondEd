@@ -294,11 +294,31 @@ export default function VoiceAssistantPage() {
       hasFinalizedRef.current = false;
 
       try {
+        let currentMemory = memory;
+        try {
+          const user = auth.currentUser;
+          const token = await user?.getIdToken();
+          const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:5000';
+          const memRes = await fetch(`${baseUrl}/api/summary/last/${studentId}?topic=${encodeURIComponent(finalTopic)}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (memRes.ok) {
+            const memData = await memRes.json();
+            if (memData.lastSession) {
+              currentMemory = `Last session summary: ${memData.lastSession.summary}. Next steps requested: ${memData.lastSession.profileUpdates?.nextSteps}`;
+            } else {
+              currentMemory = "No previous session on this topic.";
+            }
+          }
+        } catch (mErr) {
+          console.error("Failed to fetch fresh memory for topic", mErr);
+        }
+
         const variableValues = {
           learningStyle: Array.isArray(profile?.learningStyle) ? profile.learningStyle.join(", ") : (profile?.learningStyle || "Adaptive"),
           currentTopic: finalTopic,
           academicGoals: profile?.academicGoals || "Improve understanding.",
-          pastSessionMemory: memory || "No previous session."
+          pastSessionMemory: currentMemory || "No previous session."
         };
 
         const call = await vapiRef.current.start(ASSISTANT_ID, { variableValues });

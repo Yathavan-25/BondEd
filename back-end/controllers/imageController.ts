@@ -26,52 +26,53 @@ export const generateImage = async (req: Request, res: Response) => {
         data: { usageCount: cachedImage.usageCount + 1 }
       });
 
-      return res.status(200).json({ 
-        imageUrl: cachedImage.imageUrl, 
-        cached: true 
+      return res.status(200).json({
+        imageUrl: cachedImage.imageUrl,
+        cached: true
       });
     }
 
-    // 2. Not in cache -> Call Gemini Imagen API
+    // 2. Not in cache -> Call Gemini Image Generation API
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
       return res.status(500).json({ error: 'Gemini API key is not configured' });
     }
 
-    // Google Generative AI Imagen 3 endpoint
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey}`;
-    
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${geminiKey}`;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        instances: [
-          { prompt: prompt }
+        contents: [
+          { parts: [{ text: `Educational diagram or visual aid: ${prompt}` }] }
         ],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: "16:9" // Good for educational diagrams
+        generationConfig: {
+          responseModalities: ["IMAGE"]
         }
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API Error:', errorText);
+      console.error('Gemini Image API Error:', errorText);
+      if (response.status === 429 || errorText.includes('RESOURCE_EXHAUSTED') || errorText.includes('limit: 0')) {
+        return res.status(429).json({ error: 'Gemini image generation requires billing enabled on your Google Cloud project (free tier quota limit is 0).' });
+      }
       return res.status(500).json({ error: 'Failed to generate image from Gemini' });
     }
 
     const data = await response.json() as any;
-    
-    if (!data.predictions || data.predictions.length === 0) {
-      return res.status(500).json({ error: 'No predictions returned from Gemini' });
+
+    const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+    if (!inlineData || !inlineData.data) {
+      return res.status(500).json({ error: 'No image data returned from Gemini' });
     }
 
-    // Imagen returns raw base64 string in bytesBase64Encoded
-    const base64Data = data.predictions[0].bytesBase64Encoded;
-    const dataUrl = `data:image/jpeg;base64,${base64Data}`;
+    const mimeType = inlineData.mimeType || 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${inlineData.data}`;
 
     // 3. Save to Cache
     await prisma.cachedImage.create({
@@ -84,9 +85,9 @@ export const generateImage = async (req: Request, res: Response) => {
       }
     });
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       imageUrl: dataUrl,
-      cached: false 
+      cached: false
     });
 
   } catch (error: any) {

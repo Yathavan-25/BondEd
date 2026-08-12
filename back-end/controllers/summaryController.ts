@@ -29,3 +29,16 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const getLastSummary = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const studentId = getStringParam(req.params.studentId);
+        const topic = req.query.topic as string | undefined;
+        if (!studentId) { res.status(400).json({ error: "Student ID is missing" }); return; }
+        const lastSession = await SessionModel.getLastSessionSummary(studentId, topic);
+        res.json({ lastSession });
+    } catch (error) {
+        console.error("Failed to fetch last summary:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

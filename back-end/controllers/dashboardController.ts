@@ -79,25 +79,8 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
       }
     });
 
-    // Factor usage logs (vapi and daily minutes)
-    const usageLogs = await prisma.usageLog.findMany({ where: { userId } });
-    let usageMinsAllTime = 0;
-    let usageMinsThisWeek = 0;
-
-    usageLogs.forEach(u => {
-      const uMins = Math.round(u.usage || 0);
-      usageMinsAllTime += uMins;
-      const uDate = new Date(u.createdAt);
-      if (uDate >= currentMonday) {
-        usageMinsThisWeek += uMins;
-      }
-    });
-
-    const finalMinsAllTime = Math.max(totalMinsAllTime, usageMinsAllTime);
-    const finalMinsThisWeek = Math.max(totalMinsThisWeek, usageMinsThisWeek);
-
-    const totalHours = Number((finalMinsAllTime / 60).toFixed(1));
-    const hoursThisWeek = Number((finalMinsThisWeek / 60).toFixed(1));
+    const totalHours = Number((totalMinsAllTime / 60).toFixed(1));
+    const hoursThisWeek = Number((totalMinsThisWeek / 60).toFixed(1));
 
     // Count REAL unique partners across all completed sessions
     const uniquePartnersSet = new Set<string>();

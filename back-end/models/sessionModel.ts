@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 
 const getDurationMins = (start: Date, end: Date | null) => {
-    if (!end) return 30; 
+    if (!end) return 30;
     return Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
 };
 
@@ -20,7 +20,7 @@ export const SessionModel = {
         const sessions = await prisma.session.findMany({
             where: {
                 status: { in: ['completed', 'Completed'] },
-                OR: [ { hostId: userId }, { participants: { some: { id: userId } } } ]
+                OR: [{ hostId: userId }, { participants: { some: { id: userId } } }]
             },
             include: {
                 host: { include: { profile: true } },
@@ -38,11 +38,11 @@ export const SessionModel = {
             const safeSession = session as any;
             const analysis = safeSession.analysis;
             const partMet = analysis?.participantMetrics || {};
-            
+
             const isVoice = partMet?.sessionType === 'ai-voice' || safeSession.title?.includes("AI Session") || (!session.dailyRoomUrl && allUsers.size === 1);
 
             const durationMins = getDurationMins(session.startTime, session.endTime);
-            
+
             const knowDem = analysis?.knowledgeDemonstrated || {};
             const profUpd = analysis?.profileUpdates || {};
 
@@ -61,7 +61,7 @@ export const SessionModel = {
                     date: new Date(session.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                     completedAt: session.endTime ? new Date(session.endTime).toISOString() : null,
                     duration: `${durationMins} mins`,
-                    peers: isVoice ? undefined : Array.from(allUsers).filter(id => id !== userId).map(() => "Peer"), 
+                    peers: isVoice ? undefined : Array.from(allUsers).filter(id => id !== userId).map(() => "Peer"),
                     topicsCovered: analysis?.topics || ["General Review"],
                     keyTakeaways: analysis?.summary ? analysis.summary.split('.').map((s: string) => s.trim()).filter(Boolean).slice(0, 4) : ["Session completed successfully."],
                     nextSteps: profUpd?.nextSteps || "Review notes before next session.",
@@ -98,7 +98,7 @@ export const SessionModel = {
         const sessions = await prisma.session.findMany({
             where: {
                 status: { in: ['completed', 'Completed'] },
-                OR: [ { hostId: userId }, { participants: { some: { id: userId } } } ]
+                OR: [{ hostId: userId }, { participants: { some: { id: userId } } }]
             },
             include: { host: true, participants: true }
         });
@@ -134,12 +134,8 @@ export const SessionModel = {
                 if (cleanedTitle && cleanedTitle.toLowerCase() !== "general") sessionTopics = [cleanedTitle];
             }
 
-            if (sessionTopics.length === 0 && profile?.topics && profile.topics.length > 0) {
-                sessionTopics = profile.topics;
-            }
-
             if (sessionTopics.length === 0) {
-                sessionTopics = [session.subject || "General Study"];
+                sessionTopics = ["General Topics"];
             }
 
             sessionTopics.forEach((topic: string) => {
@@ -150,7 +146,7 @@ export const SessionModel = {
 
             const peers = session.participants.filter(p => p.id !== userId);
             if (session.hostId !== userId) peers.push(session.host);
-            
+
             peers.forEach(peer => {
                 uniquePartners.add(peer.id);
                 let pStat = partnerStats[peer.id];
@@ -171,7 +167,7 @@ export const SessionModel = {
         });
 
         const colors = [
-            "bg-[#1363CB]", "bg-purple-600", "bg-emerald-500", "bg-amber-500", 
+            "bg-[#1363CB]", "bg-purple-600", "bg-emerald-500", "bg-amber-500",
             "bg-pink-500", "bg-indigo-500", "bg-cyan-500", "bg-rose-500"
         ];
 
@@ -187,7 +183,7 @@ export const SessionModel = {
         }).sort((a, b) => b.percent - a.percent);
 
         if (timeByTopic.length === 0) {
-            const userTopics = profile?.topics && profile.topics.length > 0 ? profile.topics : ["General Study"];
+            const userTopics = profile?.topics && profile.topics.length > 0 ? profile.topics : ["General Topics"];
             const equalShare = Math.floor(100 / userTopics.length);
             timeByTopic = userTopics.map((topic, idx) => ({
                 topic,
@@ -346,14 +342,59 @@ export const SessionModel = {
         ]);
     },
 
-    processVoiceSession: async ( 
-        userId: string, 
-        summary: string = "", 
-        recordingUrl: string = "", 
-        structuredData: any = {}, 
-        selectedTopic: string = "General Review", 
-        transcriptsArray: any[] = [], 
-        sessionStartTime: Date = new Date(), 
+    getLastSessionSummary: async (userId: string, topic?: string) => {
+        let session = null;
+        if (topic) {
+            session = await prisma.session.findFirst({
+                where: {
+                    status: { in: ['completed', 'Completed'] },
+                    OR: [{ hostId: userId }, { participants: { some: { id: userId } } }],
+                    AND: [
+                        {
+                            OR: [
+                                { title: { contains: topic, mode: 'insensitive' } },
+                                { subject: { contains: topic, mode: 'insensitive' } },
+                                { analysis: { topics: { has: topic } } }
+                            ]
+                        }
+                    ]
+                },
+                include: { analysis: true },
+                orderBy: { startTime: 'desc' }
+            });
+        }
+        if (!session) {
+            session = await prisma.session.findFirst({
+                where: {
+                    status: { in: ['completed', 'Completed'] },
+                    OR: [{ hostId: userId }, { participants: { some: { id: userId } } }]
+                },
+                include: { analysis: true },
+                orderBy: { startTime: 'desc' }
+            });
+        }
+        if (!session || !session.analysis) return null;
+
+        const analysis = session.analysis as any;
+        const profUpd = analysis.profileUpdates || {};
+
+        return {
+            title: session.title,
+            summary: analysis.summary || "Completed session",
+            profileUpdates: {
+                nextSteps: profUpd.nextSteps || "Review session concepts."
+            }
+        };
+    },
+
+    processVoiceSession: async (
+        userId: string,
+        summary: string = "",
+        recordingUrl: string = "",
+        structuredData: any = {},
+        selectedTopic: string = "General Review",
+        transcriptsArray: any[] = [],
+        sessionStartTime: Date = new Date(),
         sessionEndTime: Date = new Date()
     ) => {
         const profile = await prisma.profile.findUnique({
@@ -365,7 +406,7 @@ export const SessionModel = {
         const safeTopic = selectedTopic || "General Review";
         const startTime = sessionStartTime instanceof Date ? sessionStartTime : new Date(sessionStartTime || Date.now());
         const endTime = sessionEndTime instanceof Date ? sessionEndTime : new Date(sessionEndTime || Date.now());
-    
+
         const durationMins = Math.max(1, Math.ceil((endTime.getTime() - startTime.getTime()) / 60000));
 
         try {
@@ -383,68 +424,6 @@ export const SessionModel = {
         }
 
         let safeData = structuredData || {};
-
-        // Always run Gemini fallback when submitSessionUpdate was never called (no weeklyGoal/summary)
-        const needsGemini = (!safeData.summary && !safeData.sessionSummary) || !safeData.weeklyGoal;
-        if (needsGemini && Array.isArray(transcriptsArray) && transcriptsArray.length > 0) {
-            try {
-                const geminiApiKey = process.env.GEMINI_API_KEY;
-                if (geminiApiKey) {
-                    // Filter out image entries (base64 strings would destroy the prompt)
-                    const transcriptText = transcriptsArray
-                        .filter((t: any) => t.type !== "image")
-                        .map((t: any) => `${t.role === "ai" ? "AI" : "Student"}: ${(t.text || t.message || "").substring(0, 500)}`)
-                        .join("\n");
-
-                    const prompt = `You are analyzing a student-AI voice tutoring session on topic "${safeTopic}".
-Based only on the transcript below, output ONLY valid JSON (no markdown, no backticks, no explanation) matching this exact schema. All scores must be HONEST integers (0-100) reflecting actual student performance — do NOT use placeholder values:
-{
-  "summary": "2-3 sentence summary of what was covered and how the student performed",
-  "weeklyGoal": "Specific next-step goal (e.g. 'Practice JavaScript arrays'). Must be concrete, never generic.",
-  "focusScore": 72,
-  "knowledgeScore": 65,
-  "knowledgeFeedback": "One sentence: one strength and one area for improvement.",
-  "learningPattern": "Visual",
-  "sessionInsight": "One specific sentence about how THIS student engaged — what they grasped quickly, what confused them.",
-  "bigFivePersonality": { "openness": 70, "conscientiousness": 65, "extraversion": 60, "agreeableness": 75 },
-  "personalityReasoning": "1-2 sentences explaining the Big Five scores from this conversation.",
-  "topicsCovered": ["${safeTopic}"],
-  "flashcards": ["Q: <question>? A: <answer>", "Q: <question>? A: <answer>"]
-}
-
-Transcript:
-${transcriptText}`;
-
-                    console.log("[Gemini Fallback] Running transcript analysis for topic:", safeTopic);
-
-                    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }] }],
-                            generationConfig: { temperature: 0.3 }
-                        })
-                    });
-
-                    if (geminiRes.ok) {
-                        const geminiJson: any = await geminiRes.json();
-                        const rawText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text;
-                        console.log("[Gemini Fallback] Raw response:", rawText?.substring(0, 300));
-                        if (rawText) {
-                            const cleanedText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                            const parsed = JSON.parse(cleanedText);
-                            safeData = { ...parsed, ...safeData }; 
-                            console.log("[Gemini Fallback] Parsed successfully. weeklyGoal:", parsed.weeklyGoal);
-                        }
-                    } else {
-                        const errText = await geminiRes.text();
-                        console.error("[Gemini Fallback] API error:", geminiRes.status, errText);
-                    }
-                }
-            } catch (aiErr) {
-                console.error("[Gemini Fallback] Failed:", aiErr);
-            }
-        }
 
         const summaryText = safeData.summary || safeData.sessionSummary || summary || "Completed voice study session.";
         const focusScore = safeData.focusScore ?? 78;
