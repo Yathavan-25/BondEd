@@ -347,12 +347,6 @@ export default function VoiceAssistantPage() {
         console.error("Vapi Start Error", err);
         setAssistantState("idle");
       }
-    } else if (assistantState === "listening") {
-      vapiRef.current.setMuted(true);
-      setAssistantState("paused");
-    } else if (assistantState === "paused") {
-      vapiRef.current.setMuted(false);
-      setAssistantState("listening");
     }
   };
 

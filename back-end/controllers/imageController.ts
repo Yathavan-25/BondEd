@@ -51,16 +51,18 @@ Generate clean, valid, standalone 16:9 widescreen SVG code (viewBox="0 0 1280 72
 
 Rules:
 1. DESIGN & STYLE:
-   - Use a modern flat vector design with crisp container cards (e.g. #0F172A dark slate or #F8FAFC light background).
-   - Use vibrant color highlights (e.g. #9C2FDF purple, #1363CB blue, #10B981 green, #F59E0B amber, #EF4444 red).
-   - Draw rounded rectangular blocks (<rect rx="12">), container cards, pointer lines/arrows (<path d="..." stroke-width="3">), or biological shapes (<path>).
+   - Use a modern flat vector design with crisp container cards on a clean background.
+   - Determine an appropriate and aesthetically pleasing color palette dynamically based on the subject matter (e.g., tech-blue for computer science, green/earth tones for biology, warm colors for history). Do not use random hardcoded colors.
+   - Draw rounded rectangular blocks (<rect rx="12">), container cards, pointer lines/arrows (<path d="..." stroke-width="3">), or biological/abstract shapes (<path>).
 2. TEXT & LABELS:
-   - Include clear, bold, highly legible English labels using <text> elements with clean sans-serif fonts (e.g. font-family="system-ui, sans-serif" font-weight="bold").
-   - For Computer Science / HTML / CSS: draw container boxes representing elements, code blocks, and styled outputs with clear text callouts.
-   - For Biology / Anatomy: draw labeled vector organs/cells/structures with callout pointer lines and bold text names.
-   - For Math / Physics / Flowcharts: draw labeled step boxes and arrows.
-3. OUTPUT FORMAT:
-   - Output ONLY valid raw SVG code starting with <svg> and ending with </svg>.
+   - Include clear, bold, highly legible English labels using <text> elements with clean sans-serif fonts.
+   - For Computer Science: draw container boxes representing elements/code blocks with clear text callouts.
+   - For Biology/Anatomy: draw labeled vector organs/cells/structures with pointer lines and bold text names.
+   - For Math/Physics/Flowcharts: draw labeled step boxes and arrows.
+   - For Abstract Concepts (e.g., "game mechanics", "learning strategies"): generate a conceptual flowchart or diagram with related visual icons, connected boxes, and descriptive text placeholders illustrating the concept.
+3. OUTPUT FORMAT (CRITICAL):
+   - You MUST output ONLY valid raw SVG code starting with <svg> and ending with </svg>.
+   - NEVER output conversational text, explanations, or refusals.
    - Do NOT include markdown code fences (\`\`\`xml or \`\`\`svg), HTML wrappers, or any conversational text.
 
 User Request: "${prompt}"`;
@@ -112,10 +114,10 @@ User Request: "${prompt}"`;
     }
 
     // 4. FALLBACK ENGINE: Pollinations SANA / FLUX for Photo Requests or Fallback
-    let finalPrompt = `Modern flat vector educational graphic design, high resolution: ${prompt}`;
+    let finalPrompt = `Modern flat vector educational graphic diagram, conceptual flowchart style, no humans, no characters, high resolution: ${prompt}`;
     if (geminiKey) {
       try {
-        const polishInstruction = `Summarize this user request into a concise 1-sentence prompt for a 2D flat vector educational graphic. User Request: "${prompt}"`;
+        const polishInstruction = `Summarize this user request into a concise 1-sentence prompt for a 2D flat vector educational graphic. Ensure the prompt explicitly describes an educational diagram, chart, or conceptual layout. Do NOT include humans or characters. User Request: "${prompt}"`;
         const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -127,7 +129,7 @@ User Request: "${prompt}"`;
         if (geminiRes.ok) {
           const geminiJson: any = await geminiRes.json();
           const polishedText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (polishedText) finalPrompt = polishedText;
+          if (polishedText) finalPrompt = `Educational flowchart graphic, abstract concepts, no humans, no characters: ${polishedText}`;
         }
       } catch { /* ignore fallback error */ }
     }
