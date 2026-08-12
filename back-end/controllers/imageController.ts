@@ -32,29 +32,31 @@ export const generateImage = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Intelligently analyze & polish raw spoken request using Gemini into a subject-tailored visual prompt
-    let finalPrompt = `High quality crisp educational diagram, clear 2D graphic, readable text labels, HD: ${prompt}`;
+    // 2. Check if prompt is a photo request vs an educational visual/diagram request
+    const isPhotoRequest = /\b(photo|photograph|real picture|camera picture|real-world photo)\b/i.test(prompt);
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (geminiKey) {
+
+    // 3. GEMINI VECTOR ENGINE: Generate 100% crisp vector SVG graphics for educational diagrams/schematics/anatomy
+    if (geminiKey && !isPhotoRequest) {
       try {
-        const polishInstruction = `You are an expert AI educational visualization prompt engineer for text-to-image models (SANA/FLUX).
-Analyze the student request or conversational prompt below and generate a 1-sentence prompt for an HD educational visual diagram or graphic.
+        console.log("[ImageController] Using Gemini Vector Engine for SVG graphic generation...");
+        const svgSystemInstruction = `You are a master vector graphic illustrator and educational diagram designer.
+Generate clean, valid, standalone 16:9 widescreen SVG code (viewBox="0 0 1280 720" width="1280" height="720") illustrating the student's request.
 
-Analysis & Disambiguation Rules:
-1. IDENTIFY THE SUBJECT & CONTEXT:
-   - If Computer Science / Web Dev / Coding (e.g. "DOM tree", "binary tree", "HTML nesting"): Disambiguate technical metaphors (e.g. use "hierarchical block diagram with parent and child node boxes" or "nested container cards").
-   - If Biology / Botany / Environmental Science (e.g. "oak tree", "plant cell", "photosynthesis"): Describe a detailed 2D vector scientific diagram of the actual botanical tree, plant anatomy, or biological system.
-   - If Chemistry / Physics / Math / History: Adapt the visual layout naturally (e.g., molecular structure diagram, physics force vector chart, coordinate plane, or chronological timeline).
-
-2. DETERMINE OPTIMAL VISUAL STRUCTURE DYNAMICALLY:
-   - Choose the best structural layout for the specific topic (flowchart, side-by-side comparison, block diagram, timeline, or vector illustration). Do not force a static layout.
-
-3. OPTIMIZE FOR TEXT & LEGIBILITY:
-   - Request clean typography with minimal, bold, plain English labels (e.g. "HTML", "CSS", "Nucleus", "Photosynthesis").
-   - Avoid requesting long code paragraphs or dense multi-line text blocks inside the image.
-
-Output ONLY the polished prompt string without quotes, markdown, or commentary.
+Rules:
+1. DESIGN & STYLE:
+   - Use a modern flat vector design with crisp container cards (e.g. #0F172A dark slate or #F8FAFC light background).
+   - Use vibrant color highlights (e.g. #9C2FDF purple, #1363CB blue, #10B981 green, #F59E0B amber, #EF4444 red).
+   - Draw rounded rectangular blocks (<rect rx="12">), container cards, pointer lines/arrows (<path d="..." stroke-width="3">), or biological shapes (<path>).
+2. TEXT & LABELS:
+   - Include clear, bold, highly legible English labels using <text> elements with clean sans-serif fonts (e.g. font-family="system-ui, sans-serif" font-weight="bold").
+   - For Computer Science / HTML / CSS: draw container boxes representing elements, code blocks, and styled outputs with clear text callouts.
+   - For Biology / Anatomy: draw labeled vector organs/cells/structures with callout pointer lines and bold text names.
+   - For Math / Physics / Flowcharts: draw labeled step boxes and arrows.
+3. OUTPUT FORMAT:
+   - Output ONLY valid raw SVG code starting with <svg> and ending with </svg>.
+   - Do NOT include markdown code fences (\`\`\`xml or \`\`\`svg), HTML wrappers, or any conversational text.
 
 User Request: "${prompt}"`;
 
@@ -62,33 +64,75 @@ User Request: "${prompt}"`;
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: polishInstruction }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 140 }
+            contents: [{ parts: [{ text: svgSystemInstruction }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 3000 }
           })
         });
 
         if (geminiRes.ok) {
           const geminiJson: any = await geminiRes.json();
-          const polishedText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (polishedText) {
-            finalPrompt = `Modern flat vector educational infographic, clean studio graphic design, high resolution: ${polishedText.replace(/["']/g, '')}`;
-            console.log("[ImageController] Polished Prompt:", finalPrompt);
+          let rawText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+          
+          // Clean backticks or wrappers if present
+          rawText = rawText.replace(/^```(xml|svg)?/i, '').replace(/```$/i, '').trim();
+          
+          const svgMatch = rawText.match(/<svg[\s\S]*<\/svg>/i);
+          if (svgMatch) {
+            const svgContent = svgMatch[0];
+            const base64Svg = Buffer.from(svgContent).toString('base64');
+            const dataUrl = `data:image/svg+xml;base64,${base64Svg}`;
+
+            console.log("[ImageController] Gemini Vector SVG generated successfully!");
+
+            // Save to Cache
+            await prisma.cachedImage.create({
+              data: {
+                topic,
+                subject,
+                imageUrl: dataUrl,
+                source: 'gemini-svg',
+                keywords: [prompt.toLowerCase().trim()]
+              }
+            });
+
+            return res.status(200).json({
+              imageUrl: dataUrl,
+              cached: false
+            });
           }
         }
-      } catch (polishErr) {
-        console.error("[ImageController] Failed to polish prompt with Gemini, using fallback:", polishErr);
+      } catch (svgErr) {
+        console.error("[ImageController] Gemini SVG Engine failed, falling back to Pollinations:", svgErr);
       }
     }
 
-    // 3. Not in cache -> Call Pollinations SANA Engine (Nvidia linear-attention HD model optimized for diagrams/typography)
+    // 4. FALLBACK ENGINE: Pollinations SANA / FLUX for Photo Requests or Fallback
+    let finalPrompt = `Modern flat vector educational graphic design, high resolution: ${prompt}`;
+    if (geminiKey) {
+      try {
+        const polishInstruction = `Summarize this user request into a concise 1-sentence prompt for a 2D flat vector educational graphic. User Request: "${prompt}"`;
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: polishInstruction }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 100 }
+          })
+        });
+        if (geminiRes.ok) {
+          const geminiJson: any = await geminiRes.json();
+          const polishedText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (polishedText) finalPrompt = polishedText;
+        }
+      } catch { /* ignore fallback error */ }
+    }
+
     const seed = Math.floor(Math.random() * 1000000);
     let pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=sana&width=1280&height=720&nologo=true&seed=${seed}`;
 
     let response = await fetch(pollinationsUrl);
 
-    // Fallback to FLUX model if SANA engine is busy
     if (!response.ok) {
-      console.warn("Pollinations SANA engine response not ok, falling back to FLUX...");
       pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=flux&width=1280&height=720&nologo=true&seed=${seed}`;
       response = await fetch(pollinationsUrl);
     }
