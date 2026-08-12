@@ -32,21 +32,29 @@ export const generateImage = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Polish raw spoken text/request using Gemini into an optimized visual diagram prompt
-    let finalPrompt = `High quality crisp educational diagram, clear vector flowchart, readable text labels, HD: ${prompt}`;
+    // 2. Intelligently analyze & polish raw spoken request using Gemini into a subject-tailored visual prompt
+    let finalPrompt = `High quality crisp educational diagram, clear 2D graphic, readable text labels, HD: ${prompt}`;
 
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey) {
       try {
-        const polishInstruction = `You are an expert AI prompt engineer for educational graphic design and visual diagrams.
-Given the student request or conversational prompt below, transform it into a 1-sentence prompt for a modern, flat-vector educational infographic diagram.
-Rules:
-1. Describe a clean 2D vector graphic with vibrant colored rectangular blocks on a clean light background.
-2. Specify clear structural layout (e.g. "3-column side-by-side comparison layout", "stacked horizontal cards in top-to-bottom order").
-3. DO NOT use words like "tree", "plant", or botanical terms—use "hierarchy chart", "nested boxes", or "block diagram".
-4. Keep labels minimal, bold, and in plain English (e.g. HTML, CSS, STYLED PAGE).
-5. Avoid requesting long code snippets or nested paragraph text inside the image.
-6. Output ONLY the polished prompt string without quotes, markdown, or extra commentary.
+        const polishInstruction = `You are an expert AI educational visualization prompt engineer for text-to-image models (SANA/FLUX).
+Analyze the student request or conversational prompt below and generate a 1-sentence prompt for an HD educational visual diagram or graphic.
+
+Analysis & Disambiguation Rules:
+1. IDENTIFY THE SUBJECT & CONTEXT:
+   - If Computer Science / Web Dev / Coding (e.g. "DOM tree", "binary tree", "HTML nesting"): Disambiguate technical metaphors (e.g. use "hierarchical block diagram with parent and child node boxes" or "nested container cards").
+   - If Biology / Botany / Environmental Science (e.g. "oak tree", "plant cell", "photosynthesis"): Describe a detailed 2D vector scientific diagram of the actual botanical tree, plant anatomy, or biological system.
+   - If Chemistry / Physics / Math / History: Adapt the visual layout naturally (e.g., molecular structure diagram, physics force vector chart, coordinate plane, or chronological timeline).
+
+2. DETERMINE OPTIMAL VISUAL STRUCTURE DYNAMICALLY:
+   - Choose the best structural layout for the specific topic (flowchart, side-by-side comparison, block diagram, timeline, or vector illustration). Do not force a static layout.
+
+3. OPTIMIZE FOR TEXT & LEGIBILITY:
+   - Request clean typography with minimal, bold, plain English labels (e.g. "HTML", "CSS", "Nucleus", "Photosynthesis").
+   - Avoid requesting long code paragraphs or dense multi-line text blocks inside the image.
+
+Output ONLY the polished prompt string without quotes, markdown, or commentary.
 
 User Request: "${prompt}"`;
 
@@ -55,7 +63,7 @@ User Request: "${prompt}"`;
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: polishInstruction }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 120 }
+            generationConfig: { temperature: 0.2, maxOutputTokens: 140 }
           })
         });
 
@@ -63,7 +71,7 @@ User Request: "${prompt}"`;
           const geminiJson: any = await geminiRes.json();
           const polishedText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
           if (polishedText) {
-            finalPrompt = `Modern flat vector educational infographic, clean studio graphic design, minimalist 2D vector, high contrast: ${polishedText.replace(/["']/g, '')}`;
+            finalPrompt = `Modern flat vector educational infographic, clean studio graphic design, high resolution: ${polishedText.replace(/["']/g, '')}`;
             console.log("[ImageController] Polished Prompt:", finalPrompt);
           }
         }
@@ -72,10 +80,18 @@ User Request: "${prompt}"`;
       }
     }
 
+    // 3. Not in cache -> Call Pollinations SANA Engine (Nvidia linear-attention HD model optimized for diagrams/typography)
     const seed = Math.floor(Math.random() * 1000000);
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=flux&width=1280&height=720&nologo=true&seed=${seed}`;
+    let pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=sana&width=1280&height=720&nologo=true&seed=${seed}`;
 
-    const response = await fetch(pollinationsUrl);
+    let response = await fetch(pollinationsUrl);
+
+    // Fallback to FLUX model if SANA engine is busy
+    if (!response.ok) {
+      console.warn("Pollinations SANA engine response not ok, falling back to FLUX...");
+      pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=flux&width=1280&height=720&nologo=true&seed=${seed}`;
+      response = await fetch(pollinationsUrl);
+    }
 
     if (!response.ok) {
       console.error('Pollinations API Error:', response.statusText);
