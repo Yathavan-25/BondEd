@@ -41,15 +41,16 @@ export const generateImage = async (req: Request, res: Response) => {
         const polishInstruction = `You are an expert AI prompt engineer for educational graphic design and visual diagrams.
 Given the student request or conversational prompt below, transform it into a 1-sentence prompt for a modern, flat-vector educational infographic diagram.
 Rules:
-1. Describe a clean 2D vector graphic with vibrant colored cards/blocks on a clean light background.
-2. Specify clear structural layout (e.g. "stacked horizontal boxes in top-to-bottom order", "2x2 grid layout", "3-stage horizontal process flowchart").
-3. Keep labels minimal, bold, and in plain English (e.g. DOCTYPE, HTML, HEAD, BODY).
-4. Avoid requesting long code snippets or nested paragraph text inside the image.
-5. Output ONLY the polished prompt string without quotes, markdown, or extra commentary.
+1. Describe a clean 2D vector graphic with vibrant colored rectangular blocks on a clean light background.
+2. Specify clear structural layout (e.g. "3-column side-by-side comparison layout", "stacked horizontal cards in top-to-bottom order").
+3. DO NOT use words like "tree", "plant", or botanical terms—use "hierarchy chart", "nested boxes", or "block diagram".
+4. Keep labels minimal, bold, and in plain English (e.g. HTML, CSS, STYLED PAGE).
+5. Avoid requesting long code snippets or nested paragraph text inside the image.
+6. Output ONLY the polished prompt string without quotes, markdown, or extra commentary.
 
 User Request: "${prompt}"`;
 
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
