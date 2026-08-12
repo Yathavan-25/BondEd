@@ -436,6 +436,10 @@ export const SessionModel = {
         const weeklyGoal = safeData.weeklyGoal || "Review session concepts.";
         const flashcards = Array.isArray(safeData.flashcards) ? safeData.flashcards : [];
         const sessionInsight = safeData.sessionInsight || null;
+        const topics = Array.isArray(safeData.topicsCovered) && safeData.topicsCovered.length > 0
+            ? safeData.topicsCovered
+            : [safeTopic];
+
         const rawBigFive = (safeData.bigFivePersonality || {}) as Record<string, any>;
         const traitKeys = ["openness", "conscientiousness", "extraversion", "agreeableness"] as const;
         
@@ -466,15 +470,16 @@ export const SessionModel = {
         const mergedPersonality: Record<string, any> = { ...priorPersonality };
 
         traitKeys.forEach((trait) => {
-            const newScore = newBigFiveScores[trait];
+            const newScore = newBigFiveScores[trait] ?? 70;
             const priorScore = typeof priorPersonality[trait] === "number" 
                 ? priorPersonality[trait] 
-                : (priorPersonality[trait]?.score ?? newScore);
+                : (typeof priorPersonality[trait]?.score === "number" ? priorPersonality[trait].score : newScore);
 
             const updatedScore = Math.round(priorScore * 0.7 + newScore * 0.3);
+            const reasoning = personalityBreakdown[trait]?.reasoning || priorPersonality[trait]?.reasoning || "";
             mergedPersonality[trait] = {
                 score: updatedScore,
-                reasoning: personalityBreakdown[trait].reasoning || priorPersonality[trait]?.reasoning || ""
+                reasoning
             };
         });
 
@@ -565,7 +570,7 @@ export const SessionModel = {
         });
 
         const exhibitedTraits = traitKeys.map((trait) => {
-            const data = personalityBreakdown[trait];
+            const data = personalityBreakdown[trait] || { score: 70, reasoning: "" };
             return `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${data.score}%`;
         });
 
