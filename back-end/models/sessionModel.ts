@@ -456,21 +456,51 @@ export const SessionModel = {
         const currentKnowledge = (profile.knowledgeLevel as any) || { score: 50, topicBreakdown: [] };
         const mergedBreakdown: any[] = Array.isArray(currentKnowledge.topicBreakdown) ? [...currentKnowledge.topicBreakdown] : [];
 
-        const existingIdx = mergedBreakdown.findIndex((b) => b.topic && b.topic.toLowerCase().trim() === safeTopic.toLowerCase().trim());
-        if (existingIdx !== -1) {
-            mergedBreakdown[existingIdx] = {
-                ...mergedBreakdown[existingIdx],
-                score: Math.round((mergedBreakdown[existingIdx].score + knowledgeScore) / 2),
-                summary: safeData.knowledgeFeedback || mergedBreakdown[existingIdx].summary || ""
-            };
-        } else {
-            mergedBreakdown.push({
-                topic: safeTopic,
-                subject: profile.subjects?.[0] || "General Studies",
-                score: knowledgeScore,
-                summary: safeData.knowledgeFeedback || ""
+        // If Vapi tool call submitted topicAssessments array, merge each concept/sub-topic into topicBreakdown
+        if (Array.isArray(safeData.topicAssessments) && safeData.topicAssessments.length > 0) {
+            safeData.topicAssessments.forEach((ta: any) => {
+                const subTopicName = ta.topic || safeTopic;
+                const subSubjectName = ta.subject || profile.subjects?.[0] || safeTopic;
+                const subScore = typeof ta.score === 'number' ? ta.score : knowledgeScore;
+                const subSummary = ta.summary || safeData.knowledgeFeedback || "";
+
+                const existingIdx = mergedBreakdown.findIndex((b) => b.topic && b.topic.toLowerCase().trim() === subTopicName.toLowerCase().trim());
+                if (existingIdx !== -1) {
+                    mergedBreakdown[existingIdx] = {
+                        ...mergedBreakdown[existingIdx],
+                        score: Math.round((mergedBreakdown[existingIdx].score + subScore) / 2),
+                        summary: subSummary || mergedBreakdown[existingIdx].summary || ""
+                    };
+                } else {
+                    mergedBreakdown.push({
+                        topic: subTopicName,
+                        subject: subSubjectName,
+                        score: subScore,
+                        summary: subSummary
+                    });
+                }
             });
+        } else {
+            const existingIdx = mergedBreakdown.findIndex((b) => b.topic && b.topic.toLowerCase().trim() === safeTopic.toLowerCase().trim());
+            if (existingIdx !== -1) {
+                mergedBreakdown[existingIdx] = {
+                    ...mergedBreakdown[existingIdx],
+                    score: Math.round((mergedBreakdown[existingIdx].score + knowledgeScore) / 2),
+                    summary: safeData.knowledgeFeedback || mergedBreakdown[existingIdx].summary || ""
+                };
+            } else {
+                mergedBreakdown.push({
+                    topic: safeTopic,
+                    subject: profile.subjects?.[0] || "General Studies",
+                    score: knowledgeScore,
+                    summary: safeData.knowledgeFeedback || ""
+                });
+            }
         }
+
+        const sessionStrengths = (Array.isArray(safeData.topicAssessments) && safeData.topicAssessments.length > 0)
+            ? safeData.topicAssessments.map((ta: any) => ({ subject: ta.topic, proficiency: ta.score }))
+            : mergedBreakdown.map((b) => ({ subject: b.topic, proficiency: b.score }));
 
         const overallScore = mergedBreakdown.length > 0
             ? Math.round(mergedBreakdown.reduce((sum, b) => sum + (b.score || 0), 0) / mergedBreakdown.length)
@@ -538,7 +568,7 @@ export const SessionModel = {
                         },
                         knowledgeDemonstrated: {
                             score: knowledgeScore,
-                            strengths: mergedBreakdown.map((b) => ({ subject: b.topic, proficiency: b.score }))
+                            strengths: sessionStrengths
                         },
                         profileUpdates: {
                             nextSteps: weeklyGoal,

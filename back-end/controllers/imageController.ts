@@ -32,10 +32,42 @@ export const generateImage = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Not in cache -> Call Pollinations FLUX Engine
+    // 2. Polish raw spoken text/request using Gemini into an optimized visual diagram prompt
+    let finalPrompt = `High quality crisp educational diagram, clear vector flowchart, readable text labels, HD: ${prompt}`;
+
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      try {
+        const polishInstruction = `You are an expert AI prompt engineer for educational image generation models (FLUX/Stable Diffusion).
+Given the user request below, output ONLY a clean, optimized 1-sentence prompt describing a professional vector diagram, visual graphic, or flowchart with clean layout, simple bold labels, and vibrant colors.
+Output ONLY the polished prompt string without quotes, markdown, or extra commentary.
+
+User Request: "${prompt}"`;
+
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: polishInstruction }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 100 }
+          })
+        });
+
+        if (geminiRes.ok) {
+          const geminiJson: any = await geminiRes.json();
+          const polishedText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (polishedText) {
+            finalPrompt = `High quality crisp educational diagram, clear vector graphic, readable labels: ${polishedText.replace(/["']/g, '')}`;
+            console.log("[ImageController] Polished Prompt:", finalPrompt);
+          }
+        }
+      } catch (polishErr) {
+        console.error("[ImageController] Failed to polish prompt with Gemini, using fallback:", polishErr);
+      }
+    }
+
     const seed = Math.floor(Math.random() * 1000000);
-    const enhancedPrompt = `High quality crisp educational diagram, clear vector flowchart, readable text labels, HD: ${prompt}`;
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?model=flux&width=1280&height=720&nologo=true&seed=${seed}`;
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=flux&width=1280&height=720&nologo=true&seed=${seed}`;
 
     const response = await fetch(pollinationsUrl);
 

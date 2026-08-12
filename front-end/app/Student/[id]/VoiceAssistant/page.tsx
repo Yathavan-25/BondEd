@@ -134,6 +134,7 @@ export default function VoiceAssistantPage() {
         const newItem: VisualAidItem = { id: Math.random().toString(36).substring(2, 9), url: data.imageUrl, prompt };
         setVisualAids((prev) => {
           const next = [...prev, newItem];
+          visualAidsRef.current = next;
           setActiveVisualIndex(next.length - 1);
           return next;
         });
@@ -168,7 +169,7 @@ export default function VoiceAssistantPage() {
     const startTime = sessionStartRef.current?.toISOString() || new Date().toISOString();
     const endTime = new Date().toISOString();
 
-    const imageTranscripts = visualAids.map((v) => ({ role: "ai", text: v.url, type: "image" }));
+    const imageTranscripts = visualAidsRef.current.map((v) => ({ role: "ai", text: v.url, type: "image" }));
     const mergedTranscripts = [...transcriptsRef.current, ...imageTranscripts];
 
     try {
