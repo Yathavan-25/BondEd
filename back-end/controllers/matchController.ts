@@ -3,7 +3,7 @@ import prisma from "../config/prisma.js";
 
 //Helper function to calculate the overlap between two arrays (eg : subject overlap )
 const calculateMatch = (arr1 : string[], arr2 : string[]) => {
-    if(!arr1 || !arr2) return 0;
+    if(!arr1 || !arr2 || arr1.length === 0 || arr2.length === 0) return 0;
     //filters any values that are on array one from array two
     const overlap = arr1.filter( value => arr2.includes(value));
     return overlap.length / Math.max(arr1.length, arr2.length);
@@ -31,21 +31,37 @@ const calculateAbsMatch = (arr1 : string[], arr2 : string[]) =>{
 // Helper 3: Advanced Psychological Big Five Matching
 const calculateBigFiveScore = (p1: any, p2: any): number => {
     // If profiles are missing (legacy users), return a neutral 0.5
-    if (!p1 || !p2 || !p1.conscientiousness || !p2.conscientiousness) return 0.5;
+    if (!p1 || !p2) return 0.5;
+
+    const getScore = (p: any, trait: string) => {
+        if (!p || !p[trait]) return null;
+        return typeof p[trait] === 'object' ? p[trait].score : p[trait];
+    };
+
+    const c1 = getScore(p1, 'conscientiousness');
+    const c2 = getScore(p2, 'conscientiousness');
+    if (c1 === null || c2 === null) return 0.5;
+
+    const e1 = getScore(p1, 'extraversion') || 50;
+    const e2 = getScore(p2, 'extraversion') || 50;
+    
+    const o1 = getScore(p1, 'openness') || 50;
+    const o2 = getScore(p2, 'openness') || 50;
+    
+    const a1 = getScore(p1, 'agreeableness') || 50;
+    const a2 = getScore(p2, 'agreeableness') || 50;
 
     // 1. Conscientiousness (Highest Weight for Study Partners - Work Ethic)
-    // Formula: 1 - (Difference / 100). Closer scores = closer to 1.0
-    const cMatch = 1 - (Math.abs(p1.conscientiousness - p2.conscientiousness) / 100);
+    const cMatch = 1 - (Math.abs(c1 - c2) / 100);
 
     // 2. Extraversion (Medium Weight - Social Energy)
-    const eMatch = 1 - (Math.abs(p1.extraversion - p2.extraversion) / 100);
+    const eMatch = 1 - (Math.abs(e1 - e2) / 100);
 
     // 3. Openness (Medium Weight - Abstract vs Concrete thinking)
-    const oMatch = 1 - (Math.abs(p1.openness - p2.openness) / 100);
+    const oMatch = 1 - (Math.abs(o1 - o2) / 100);
 
     // 4. Agreeableness (Bonus - highly agreeable people work well with everyone)
-    // Instead of difference, we just reward if both have high agreeableness
-    const aBonus = ((p1.agreeableness + p2.agreeableness) / 200) * 0.2; // Max 0.2 bump
+    const aBonus = ((a1 + a2) / 200) * 0.2; // Max 0.2 bump
 
     // Weighted Average of the core traits
     let finalPsychScore = (cMatch * 0.5) + (eMatch * 0.25) + (oMatch * 0.25);
