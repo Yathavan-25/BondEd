@@ -7,11 +7,11 @@ export const syncUserWithFirebase = async (firebaseUid: string, email: string, f
     create: {
       firebaseUid,
       email,
-      firstName : firstName ?? null,
-      lastName : lastName ?? null,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
       credits: {
         create: {
-          vapiMinutesRemaining: 5,
+          vapiMinutesRemaining: 10,
           dailyMinutesRemaining: 30
         }
       }
@@ -34,12 +34,12 @@ export const getUserByFirebaseUid = async (firebaseUid: string) => {
 };
 
 export const upsertUserProfile = async (
-  userId: string, 
+  userId: string,
   profileData: {
     personality: any;
     learningStyle: string[];
     knowledgeLevel: any;
-    topics : string[];
+    topics: string[];
     subjects: string[];
     availability: any;
     academicGoals: string;
