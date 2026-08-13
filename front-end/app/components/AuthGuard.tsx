@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, } from 'firebase/auth';
 import { auth } from '@/lib/firebase'; // Ensure this matches your firebase export
-import { Loader2 } from 'lucide-react';
+import { MajorLoader } from '@/components/ui/major-loader';
 
 const publicPaths = [
   '/',
@@ -98,7 +98,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+        <MajorLoader />
       </div>
     );
   }

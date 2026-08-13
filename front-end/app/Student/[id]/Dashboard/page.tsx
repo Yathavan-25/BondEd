@@ -2,12 +2,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams, useRouter } from "next/navigation";
 import { onAuthStateChanged, } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import {
   Flame, Clock, Users, Target, CheckCircle2,
-  ChevronRight, UserPlus, CalendarIcon, Search, Loader2
+  ChevronRight, UserPlus, CalendarIcon, Search
 } from "lucide-react";
 
 // ── animated counter hook ──────────────────────────────────────────────────
@@ -148,7 +149,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <Loader2 className="size-10 text-violet-600 animate-spin mb-4" />
+        <DotsRing className="text-violet-600 mb-4 w-8 h-8"  />
         <p className="text-gray-500 font-medium">Loading your dashboard...</p>
       </div>
     );

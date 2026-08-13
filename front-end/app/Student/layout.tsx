@@ -2,12 +2,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { 
   Search, Bell, LayoutDashboard, Users, Calendar, 
   BarChart2, PanelLeft, X, ArrowLeft, Mic,
   GraduationCap, Summary, Zap, Video, CreditCard, Check, Inbox, Clock,
-  User, LogOut, FileText, Loader2, ChevronUp, MessageSquareHeart
+  User, LogOut, FileText, ChevronUp, MessageSquareHeart
 } from "lucide-react";
 import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -310,7 +311,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 shadow-2xl rounded-2xl p-4 z-50 max-h-96 overflow-y-auto space-y-4 animate-in fade-in slide-in-from-top-2">
                       {isSearchLoading && (
                         <div className="py-6 flex items-center justify-center text-gray-400 gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-[#1363CB]" /> Searching...
+                          <DotsRing className="text-[#1363CB] w-8 h-8"  /> Searching...
                         </div>
                       )}
 

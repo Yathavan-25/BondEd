@@ -4,11 +4,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Vapi from "@vapi-ai/web";
-import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, Loader2, BookOpen, AlertTriangle, Image as ImageIcon, Maximize2, Download, X, PhoneOff } from "lucide-react";
+import { Mic, Square, Pause, Sparkles, Volume2, CheckCircle, Activity, Clock, Waves, BookOpen, AlertTriangle, Image as ImageIcon, Maximize2, Download, X, PhoneOff } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import MermaidDiagram from "@/components/MermaidDiagram";
@@ -350,7 +351,7 @@ export default function VoiceAssistantPage() {
     }
   };
 
-  const stopSession = () => {
+  function stopSession() {
     setAssistantState("analyzing");
 
     try {
@@ -464,7 +465,7 @@ export default function VoiceAssistantPage() {
               <motion.div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(from 0deg, ${minutesRemaining <= 2 ? '#ef4444' : '#1363CB'}, #9C2FDF, ${minutesRemaining <= 2 ? '#ef4444' : '#1363CB'})`, WebkitMask: "radial-gradient(circle, transparent 58%, black 60%)", mask: "radial-gradient(circle, transparent 58%, black 60%)", opacity: assistantState === "listening" ? 0.9 : 0.25 }} animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: assistantState === "listening" ? 6 : 22, ease: "linear" }} />
               {assistantState === "listening" && [0, 0.6, 1.2].map((delay, i) => <motion.div key={i} className={`absolute inset-2 rounded-full border ${minutesRemaining <= 2 ? 'border-red-500/40' : 'border-[#9C2FDF]/40'}`} initial={{ scale: 0.9, opacity: 0.6 }} animate={{ scale: 1.3, opacity: 0 }} transition={{ duration: 2.4, repeat: Infinity, delay, ease: "easeOut" }} />)}
               <motion.div animate={{ scale: assistantState === "listening" ? [1, 1.05, 1] : 1 }} transition={{ repeat: assistantState === "listening" ? Infinity : 0, duration: 1.8, ease: "easeInOut" }} className={`absolute w-28 h-28 rounded-full flex items-center justify-center z-10 transition-colors duration-500 ${assistantState === "idle" || assistantState === "stopped" ? "bg-gray-100 shadow-inner" : minutesRemaining <= 2 ? "bg-linear-to-br from-red-500 to-[#9C2FDF] shadow-[0_0_50px_rgba(239,68,68,0.55)]" : "bg-linear-to-br from-[#1363CB] to-[#9C2FDF] shadow-[0_0_50px_rgba(156,47,223,0.55)]"}`}>
-                {assistantState === "loading" || assistantState === "analyzing" ? <Loader2 className="w-10 h-10 text-white animate-spin" /> : assistantState === "stopped" ? <CheckCircle className="w-10 h-10 text-gray-400" /> : <Volume2 className={`w-10 h-10 ${assistantState === "idle" ? "text-gray-400" : "text-white"}`} />}
+                {assistantState === "loading" || assistantState === "analyzing" ? <DotsRing className="text-white" /> : assistantState === "stopped" ? <CheckCircle className="w-10 h-10 text-gray-400" /> : <Volume2 className={`w-10 h-10 ${assistantState === "idle" ? "text-gray-400" : "text-white"}`} />}
               </motion.div>
             </div>
 
@@ -494,7 +495,7 @@ export default function VoiceAssistantPage() {
                   disabled
                   className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-400 font-bold text-base flex items-center gap-3 cursor-not-allowed border border-gray-200"
                 >
-                  <Loader2 className="w-5 h-5 animate-spin text-[#9C2FDF]" /> Connecting to AI...
+                  <DotsRing className="text-[#9C2FDF]" dotScale={0.12} radiusScale={0.25} /> Connecting to AI...
                 </button>
               )}
 
@@ -511,7 +512,7 @@ export default function VoiceAssistantPage() {
 
               {assistantState === "analyzing" && (
                 <div className="px-8 py-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-[#1363CB] font-bold text-base flex items-center gap-3 animate-pulse">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#1363CB]" /> Wrapping up & saving session...
+                  <DotsRing className="text-[#1363CB]" dotScale={0.12} radiusScale={0.25} /> Wrapping up & saving session...
                 </div>
               )}
             </div>
@@ -546,7 +547,7 @@ export default function VoiceAssistantPage() {
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <Loader2 className="w-5 h-5 text-[#9C2FDF] animate-spin" />
+                      <DotsRing className="text-[#9C2FDF]" dotScale={0.12} radiusScale={0.25} />
                       <p className="text-sm font-bold text-[#1363CB] animate-pulse">Generating visual aid diagram...</p>
                     </div>
                   </motion.div>

@@ -9,11 +9,13 @@ import { useRouter } from 'next/navigation'
 import { auth, googleProvider } from '@/lib/firebase'
 import { getAdditionalUserInfo, signInWithEmailAndPassword, signInWithPopup, signOut, sendPasswordResetEmail } from 'firebase/auth'
 import toast from 'react-hot-toast';
+import { MajorLoader } from '@/components/ui/major-loader';
 
 const Login = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Forgot Password State
   const [isForgotOpen, setIsForgotOpen] = useState(false);
@@ -82,6 +84,7 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     // Set flag BEFORE the popup so onAuthStateChanged sees it and won't auto-redirect
     sessionStorage.setItem('mfaPending', 'true');
+    setIsLoggingIn(true);
     try {
       //Google Popup
       const result = await signInWithPopup(auth, googleProvider);
@@ -139,6 +142,8 @@ const Login = () => {
       sessionStorage.removeItem('mfaPending');
       console.error("Auth error ", error);
       toast.error("Login Failed");
+    } finally {
+      setIsLoggingIn(false);
     }
   }
 
@@ -152,6 +157,7 @@ const Login = () => {
 
     // Set flag BEFORE sign-in so onAuthStateChanged sees it and won't auto-redirect
     sessionStorage.setItem('mfaPending', 'true');
+    setIsLoggingIn(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
       const additionalInfo = getAdditionalUserInfo(userCredential);
@@ -201,6 +207,8 @@ const Login = () => {
       sessionStorage.removeItem('mfaPending');
       console.log("Login Error", error);
       toast.error("Login Failed")
+    } finally {
+      setIsLoggingIn(false);
     }
   }
 
@@ -262,6 +270,7 @@ const Login = () => {
 
   return (
     <>
+      {isLoggingIn && <MajorLoader />}
       <Navbar />
       <main className="min-h-screen lg:mx-20 mx-4 my-28">
         <section className="relative w-full bg-primary-linear rounded-[2.5rem] flex flex-col lg:flex-row overflow-hidden shadow-2xl">

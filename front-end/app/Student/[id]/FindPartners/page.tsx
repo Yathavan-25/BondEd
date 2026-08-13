@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
@@ -10,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Calendar, Sparkles, Send, MessageCircleMore,
   Users, TrendingUp, Inbox, Check, X, Clock, ArrowUpRight, Sliders,
-  BrainCircuit, Lightbulb, Loader2, Video, UserCircle, BookOpen
+  BrainCircuit, Lightbulb, Video, UserCircle, BookOpen
 } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
@@ -672,7 +673,7 @@ export default function FindPartnersPage() {
                         title="Start live study room"
                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-linear-to-r from-blue-50 text-blue-600 hover:from-blue-600 hover:text-white border border-blue-100 transition-all disabled:opacity-50 cursor-pointer"
                       >
-                        {collabLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+                        {collabLoading ? <DotsRing className=" w-8 h-8"  /> : <Video className="w-5 h-5" />}
                       </button>
                     )}
                     <button onClick={() => setIsSlideOverOpen(false)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
@@ -691,7 +692,7 @@ export default function FindPartnersPage() {
                         </span>
                       </div>
 
-                      {chatLoading && <div className="flex-1 flex items-center justify-center"><Loader2 className="size-8 text-violet-600 animate-spin" /></div>}
+                      {chatLoading && <div className="flex-1 flex items-center justify-center"><DotsRing className="text-violet-600 w-8 h-8"  /></div>}
 
                       {!chatLoading && chatMessages.map((m) => {
                         const isMine = m.senderId === studentId;
@@ -915,7 +916,7 @@ function DiscoverTab({ matches, loading, onOpenConnectModal, onOpenChat }: { mat
 
       {loading && (
         <div className="py-20 flex flex-col items-center justify-center text-gray-500 space-y-4">
-          <Loader2 className="size-10 text-violet-600 animate-spin" />
+          <DotsRing className="text-violet-600 w-8 h-8"  />
           <p className="font-semibold text-lg">Finding your best study partners...</p>
         </div>
       )}
@@ -1011,7 +1012,7 @@ function DiscoverTab({ matches, loading, onOpenConnectModal, onOpenChat }: { mat
 }
 
 function SentTab({ requests, loading, onCancel }: { requests: RequestData[], loading: boolean, onCancel: (id: string) => void }) {
-  if (loading) return <div className="py-10 text-center"><Loader2 className="size-10 text-violet-600 animate-spin mx-auto" /></div>;
+  if (loading) return <div className="py-10 text-center"><DotsRing className="text-violet-600 mx-auto w-8 h-8"  /></div>;
   if (requests.length === 0) return (<div className="py-16 flex flex-col items-center justify-center text-gray-500 text-center"><Send className="w-10 h-10 text-gray-300 mb-3" /><p className="font-bold text-lg text-gray-800">No requests sent</p><p className="text-sm">When you reach out to study partners, they will appear here.</p></div>);
   return (
     <ListShell>
@@ -1039,7 +1040,7 @@ function SentTab({ requests, loading, onCancel }: { requests: RequestData[], loa
 }
 
 function ReceivedTab({ requests, loading, onRespond }: { requests: RequestData[], loading: boolean, onRespond: (id: string, action: 'accept' | 'decline') => void }) {
-  if (loading) return <div className="py-10 text-center"><Loader2 className="size-10 text-violet-600 animate-spin mx-auto" /></div>;
+  if (loading) return <div className="py-10 text-center"><DotsRing className="text-violet-600 mx-auto w-8 h-8"  /></div>;
   if (requests.length === 0) return (<div className="py-16 flex flex-col items-center justify-center text-gray-500 text-center"><Inbox className="w-10 h-10 text-gray-300 mb-3" /><p className="font-bold text-lg text-gray-800">Your inbox is clear</p><p className="text-sm">Study requests from other students will show up here.</p></div>);
   return (
     <ListShell>
@@ -1067,7 +1068,7 @@ function ReceivedTab({ requests, loading, onRespond }: { requests: RequestData[]
 }
 
 function MessagesTab({ messages, loading, onOpenChat }: { messages: MessageData[], loading: boolean, onOpenChat: (id: string) => void }) {
-  if (loading) return <div className="py-10 text-center"><Loader2 className="size-10 text-violet-600 animate-spin mx-auto" /></div>;
+  if (loading) return <div className="py-10 text-center"><DotsRing className="text-violet-600 mx-auto w-8 h-8"  /></div>;
   if (messages.length === 0) return (<div className="py-16 flex flex-col items-center justify-center text-gray-500 text-center"><Users className="w-10 h-10 text-gray-300 mb-3" /><p className="font-bold text-lg text-gray-800">No connections yet</p><p className="text-sm">When someone accepts your request, they will appear here.</p></div>);
   return (
     <ListShell>

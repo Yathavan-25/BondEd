@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import { useState, useMemo, useEffect } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Calendar, Clock, Video, Play, Sparkles, CalendarDays,
-  ChevronRight, Bookmark, Radio, Loader2, Plus, X, Users, BookOpen, Type,
+  ChevronRight, Bookmark, Radio, Plus, X, Users, BookOpen, Type,
   AlignLeft, Timer, Check, UserPlus, Mail, Mic
 } from "lucide-react";
 import Link from "next/link";
@@ -111,7 +112,7 @@ export default function SessionsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="size-10 text-[#1363CB] animate-spin" />
+        <DotsRing className="w-16 h-16 text-[#1363CB]" />
       </div>
     );
   }
@@ -312,7 +313,7 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
              onClick={handleWatchCollab}
              disabled={loadingRec}
              className={`group/btn relative bg-gradient-to-r from-gray-800 to-gray-900 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait`}>
-            {loadingRec ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+            {loadingRec ? <DotsRing className=" w-8 h-8"  /> : <Video className="w-4 h-4" />}
             {loadingRec ? "Loading..." : "Watch Recording"}
             {!loadingRec && <ChevronRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5" />}
           </button>
@@ -742,7 +743,7 @@ function CreateSessionModal({
                   <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto divide-y divide-gray-100">
                     {friendsLoading ? (
                       <div className="p-6 flex justify-center">
-                        <Loader2 className="size-10 text-violet-600 animate-spin" />
+                        <DotsRing className="text-violet-600 w-8 h-8"  />
                       </div>
                     ) : filteredFriends.length === 0 ? (
                       <div className="p-6 text-center text-sm text-gray-400">
@@ -886,7 +887,7 @@ function CreateSessionModal({
               onClick={handleSubmit}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1363CB] text-white text-sm font-bold hover:bg-[#1054a8] disabled:opacity-60 transition-all"
             >
-              {loading ? <Loader2 className="size-5 animate-spin text-white" /> : <Check className="w-4 h-4" />}
+              {loading ? <DotsRing className="text-white w-8 h-8"  /> : <Check className="w-4 h-4" />}
               {loading ? "Creating..." : "Create Session"}
             </button>
           )}

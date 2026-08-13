@@ -6,13 +6,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams, useRouter } from "next/navigation";
 import DailyIframe from "@daily-co/daily-js";
 import Vapi from "@vapi-ai/web";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, PhoneMissed, MessageSquare, X, Square, Pause, Users,
-  Sparkles, Radio, Loader2, AlertTriangle, Clock, ChevronLeft,
+  Sparkles, Radio, AlertTriangle, Clock, ChevronLeft,
   Power, ShieldCheck, Copy, Check, Bot, MicOff
 } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -629,7 +630,7 @@ export default function ActiveSessionRoom() {
                   <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-[#1363CB] to-[#9C2FDF] grid place-items-center shadow-xl shadow-[#9C2FDF]/30 animate-pulse">
                     <Users className="h-8 w-8 text-white" />
                   </div>
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-400 absolute -bottom-2 -right-2" />
+                  <DotsRing className="text-purple-400 absolute -bottom-2 -right-2 w-8 h-8"  />
                 </div>
                 <h2 className="text-xl font-bold text-slate-100">Connecting to Collaborative Room</h2>
                 <p className="text-sm text-slate-400 mt-1">Preparing high-definition video stage & AI voice copilot…</p>
@@ -742,7 +743,7 @@ export default function ActiveSessionRoom() {
                       <div className="relative mb-3">
                         <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/30 grid place-items-center">
                           {vapiState === "connecting" ? (
-                            <Loader2 className="w-7 h-7 text-purple-400 animate-spin" />
+                            <DotsRing className="text-purple-400 w-8 h-8"  />
                           ) : vapiState === "muted" ? (
                             <MicOff className="w-7 h-7 text-amber-400" />
                           ) : (
@@ -854,7 +855,7 @@ export default function ActiveSessionRoom() {
                   className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition disabled:opacity-50"
                 >
                   {isEnding ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <DotsRing className=" w-8 h-8"  />
                   ) : (
                     <Power className="w-4 h-4" />
                   )}

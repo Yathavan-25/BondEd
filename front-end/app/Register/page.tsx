@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createUserWithEmailAndPassword, deleteUser, getAdditionalUserInfo, signOut, signInWithPopup, sendEmailVerification } from 'firebase/auth';
 import toast from 'react-hot-toast';
+import { MajorLoader } from '@/components/ui/major-loader';
 
 // =========================================================================
 // 🚨 EMAIL VERIFICATION TOGGLE FOR REGISTRATION
@@ -37,6 +38,7 @@ const Register = () => {
   const [formData, setFormData] = useState({ email: '', password: '', CnfrmPassword: '', firstName: '', lastName: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Verification Pending States
   const [isPendingVerification, setIsPendingVerification] = useState(false);
@@ -98,6 +100,7 @@ const Register = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let googleUser: any = null;
     let isNewGoogleUser = false;
+    setIsRegistering(true);
     try {
       //Google Popup
       const result = await signInWithPopup(auth, googleProvider);
@@ -109,6 +112,7 @@ const Register = () => {
       if (!isNewGoogleUser) {
         await signOut(auth);
         toast.error("This account is already registered. Please sign in to continue.");
+        setIsRegistering(false);
         router.push("/Login");
         return;
       }
@@ -148,6 +152,8 @@ const Register = () => {
         await deleteUser(googleUser).catch(err => console.error("Firebase rollback error:", err));
       }
       toast.error((error as Error)?.message || "Registration Failed");
+    } finally {
+      setIsRegistering(false);
     }
   }
 
@@ -200,6 +206,7 @@ const Register = () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let createdUser: any = null;
+    setIsRegistering(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       createdUser = userCredential.user;
@@ -235,6 +242,7 @@ const Register = () => {
           setIsPendingVerification(true);
           setResendCooldown(30);
           toast.success("Account created! Please check your email to verify.");
+          setIsRegistering(false);
           return;
         }
 
@@ -261,11 +269,14 @@ const Register = () => {
       } else {
         toast.error(authError?.message || "Registration Failed");
       }
+    } finally {
+      setIsRegistering(false);
     }
   }
 
   return (
     <>
+      {isRegistering && <MajorLoader />}
       <Navbar />
       <main className="min-h-screen lg:mx-20 mx-4 my-28">
         <section className="relative w-full bg-primary-linear rounded-[2.5rem] flex flex-col lg:flex-row overflow-hidden shadow-2xl">

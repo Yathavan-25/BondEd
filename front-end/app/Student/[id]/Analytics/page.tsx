@@ -2,13 +2,14 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { motion } from "framer-motion";
 import {
   Download, Flame, Clock, Users, Target, ChevronDown, MoreHorizontal,
-  Zap, Mic, Video, BookOpen, TrendingUp, Sparkles, Loader2
+  Zap, Mic, Video, BookOpen, TrendingUp, Sparkles
 } from "lucide-react";
 
 // ---------- motion helpers ----------
@@ -69,7 +70,7 @@ export default function AnalyticsPage() {
   if (loading) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500">
-            <Loader2 className="size-10 animate-spin mb-4 text-violet-600"/> 
+            <DotsRing className="mb-4 text-violet-600 w-8 h-8" /> 
             <p className="font-semibold text-lg">Loading Analytics...</p>
         </div>
       )

@@ -2,13 +2,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { getAuth } from 'firebase/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Mic, Users, BookOpen, Brain, Target, 
   Sparkles, Clock, TrendingUp, CheckCircle2, 
-  MessageSquare, Zap, CalendarDays, Loader2, Layers,
+  MessageSquare, Zap, CalendarDays, Layers,
   Maximize2, Download, X, Image as ImageIcon
 } from 'lucide-react'
 import MermaidDiagram from '@/components/MermaidDiagram'
@@ -133,8 +134,8 @@ export default function SessionSummaryPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500">
-        <Loader2 className="w-8 h-8 animate-spin mb-4 text-[#1363CB]"/> 
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500 gap-4">
+        <DotsRing className="w-16 h-16 text-[#1363CB]"/> 
         <p className="font-semibold text-lg">Loading Summaries...</p>
       </div>
     )
@@ -215,7 +216,7 @@ export default function SessionSummaryPage() {
             {showPendingCard && (
               <div className="flex flex-col items-start px-5 py-3.5 rounded-xl border border-dashed border-[#9C2FDF]/40 bg-[#9C2FDF]/5 text-left min-w-50 shrink-0">
                 <span className="text-[11px] font-bold uppercase tracking-wider mb-1.5 text-[#9C2FDF] flex items-center gap-1.5">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Generating
+                  <DotsRing className=" w-8 h-8"  /> Generating
                 </span>
                 <span className="text-sm font-bold truncate w-full text-gray-500">Recent Session</span>
               </div>

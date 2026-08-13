@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useRef } from "react";
+import { DotsRing } from "@/components/ui/dots-ring";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signOut, sendPasswordResetEmail, updatePassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Loader2, LogOut, Save, User, BookOpen, Target, Brain, Zap, Mic, CheckCircle2, Shield, Key, Camera, Lock, Mail } from "lucide-react";
+import { LogOut, Save, User, BookOpen, Target, Brain, Zap, Mic, CheckCircle2, Shield, Key, Camera, Lock, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 
 const TABS = [
@@ -224,7 +225,7 @@ export default function ProfilePage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#1363CB]" />
+          <DotsRing className="h-16 w-16 text-[#1363CB]" />
           <p className="text-sm font-semibold text-gray-500">Loading Profile...</p>
         </div>
       </div>
@@ -500,7 +501,7 @@ export default function ProfilePage() {
                 disabled={saving}
                 className="flex items-center justify-center gap-2 rounded-xl bg-[#1363CB] px-8 py-3 font-bold text-white shadow-lg shadow-[#1363CB]/20 transition-all hover:bg-[#1054a8] disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                {saving ? <DotsRing className=" w-8 h-8"  /> : <Save className="h-5 w-5" />}
                 Save Changes
               </button>
             </div>

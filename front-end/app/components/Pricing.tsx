@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, Variants } from "framer-motion";
-import { Check, Sparkles, Loader2 } from "lucide-react";
+import { DotsRing } from "@/components/ui/dots-ring";
+import { Check, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -141,11 +142,11 @@ export default function Pricing() {
                 <div className="mt-auto pointer-events-auto">
                   {plan.highlighted ? 
                     <button onClick={() => handleCheckout(plan.name)} disabled={loadingPlan !== null} className="group border-2 bg-primary-linear w-full px-6 py-2 text-white hover:opacity-90 transition-all flex items-center justify-center gap-2">
-                        {loadingPlan === plan.name ? <Loader2 className="w-5 h-5 animate-spin"/> : "Choose Student"}
+                        {loadingPlan === plan.name ? <DotsRing className=" w-8 h-8" /> : "Choose Student"}
                     </button>
                   :
                     <button onClick={() => handleCheckout(plan.name)} disabled={loadingPlan !== null} className={`w-full px-6 py-2 text-white hover:bg-transparent hover:text-primary-color border-2 border-transparent hover:border-primary-color rounded-xl font-regular bg-primary-color transition-all flex items-center justify-center gap-2`}>
-                        {loadingPlan === plan.name ? <Loader2 className="w-5 h-5 animate-spin"/> : `Choose ${plan.name}`}
+                        {loadingPlan === plan.name ? <DotsRing className=" w-8 h-8" /> : `Choose ${plan.name}`}
                     </button> 
                   }
                 </div>

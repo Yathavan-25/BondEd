@@ -77,7 +77,7 @@ export default function SplineScene() {
 
   useEffect(() => {
     if (!checkWebGLSupport()) {
-      setHasError(true);
+      setTimeout(() => setHasError(true), 0);
     }
 
     const handleWebGLError = () => setHasError(true);
