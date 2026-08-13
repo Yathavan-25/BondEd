@@ -55,7 +55,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           if (!hasCompletedOnboarding) {
             // hasn't completed onboarding. Allow them on OnboardingFlow or public paths, else redirect
             if (!isOnboarding && !isPublicPath) {
-              router.replace(`/OnBoardingFlow/${firebase.uid}`);
+              router.replace(`/OnBoardingFlow/${data.user.id}`);
             } else {
               setLoading(false);
             }
@@ -63,12 +63,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             // HAS completed onboarding. 
             // If they are on OnboardingFlow, kick them to Dashboard.
             if (isOnboarding) {
-              router.replace(`/Student/${firebase.uid}/Dashboard`);
+              router.replace(`/Student/${data.user.id}/Dashboard`);
             } else if (pathname === '/Login' || pathname === '/Register') {
               // Don't redirect if an MFA step is in progress on the Login page
               const mfaPending = typeof window !== 'undefined' && sessionStorage.getItem('mfaPending') === 'true';
               if (!mfaPending) {
-                router.replace(`/Student/${firebase.uid}/Dashboard`);
+                router.replace(`/Student/${data.user.id}/Dashboard`);
               } else {
                 setLoading(false);
               }

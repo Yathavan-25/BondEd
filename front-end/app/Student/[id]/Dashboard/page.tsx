@@ -142,14 +142,14 @@ export default function DashboardPage() {
     return `${mins} ${mins === 1 ? 'min' : 'mins'}`;
   };
 
-  const averageGoalProgress = data?.goals?.length > 0 
+  const averageGoalProgress = data?.goals?.length > 0
     ? Math.round(data.goals.reduce((acc: any, goal: any) => acc + goal.progress, 0) / data.goals.length)
     : 0;
 
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <DotsRing className="text-violet-600 mb-4 w-8 h-8"  />
+        <DotsRing className="text-violet-600 mb-4 w-8 h-8" />
         <p className="text-gray-500 font-medium">Loading your dashboard...</p>
       </div>
     );
@@ -170,7 +170,7 @@ export default function DashboardPage() {
             {data.user.sessionsThisWeek} sessions this week · {data.user.pendingRequests} pending requests
           </p>
         </div>
-        <button 
+        <button
           onClick={() => router.push(`/Student/${studentId}/FindPartners`)}
           className="w-full sm:w-auto bg-[#1363CB] hover:bg-blue-700 active:scale-95 text-white px-5 py-2.5 rounded-[14px] font-medium text-sm transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
         >
@@ -181,10 +181,10 @@ export default function DashboardPage() {
 
       {/* ── stats ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <StatCard title="Study streak" value={`${Math.round(streak)} ${Math.round(streak) === 1 ? "day" : "days"}`} sub={data?.stats?.streak > 0 ? "🔥 Keep it up!" : "Log in daily to build your streak!"} subColor={data?.stats?.streak > 0 ? "text-[#1363CB]" : "text-gray-400"} accentColor="#1363CB" iconBg="bg-blue-50" iconColor="text-[#1363CB]" icon={Flame} sparkData={data?.stats?.streak > 0 ? [1,2,2,3,3,streak,streak] : []} sparkColor="#1363CB" />
-        <StatCard title="Hours this week" value={formatStudyTime(hours)} sub={data.stats.hours > 0 ? "Logged so far" : "Ready to study?"} subColor={data.stats.hours > 0 ? "text-[#159E22]" : "text-gray-400"} accentColor="#159E22" iconBg="bg-green-50" iconColor="text-[#159E22]" icon={Clock} sparkData={data.stats.hours > 0 ? [9,11,10,12,13,14,14.5] : []} sparkColor="#159E22" />
-        <StatCard title="Active partners" value={`${Math.round(partners)}`} sub="Past collaborations" subColor="text-[#1492ab]" accentColor="#1492ab" iconBg="bg-cyan-50" iconColor="text-[#1492ab]" icon={Users} sparkData={data.stats.partners > 0 ? [3,4,4,5,5,6,7] : []} sparkColor="#1492ab" />
-        <StatCard title="Avg session score" value={`${Math.round(score)}%`} sub="Current Knowledge Level" subColor="text-[#5114ab]" accentColor="#5114ab" iconBg="bg-purple-50" iconColor="text-[#5114ab]" icon={Target} sparkData={data.stats.score > 0 ? [80,83,85,88,87,90,92] : []} sparkColor="#5114ab" />
+        <StatCard title="Study streak" value={`${Math.round(streak)} ${Math.round(streak) === 1 ? "day" : "days"}`} sub={data?.stats?.streak > 0 ? "🔥 Keep it up!" : "Log in daily to build your streak!"} subColor={data?.stats?.streak > 0 ? "text-[#1363CB]" : "text-gray-400"} accentColor="#1363CB" iconBg="bg-blue-50" iconColor="text-[#1363CB]" icon={Flame} sparkData={data?.stats?.streak > 0 ? [1, 2, 2, 3, 3, streak, streak] : []} sparkColor="#1363CB" />
+        <StatCard title="Hours this week" value={formatStudyTime(hours)} sub={data.stats.hours > 0 ? "Studied so far" : "Ready to study?"} subColor={data.stats.hours > 0 ? "text-[#159E22]" : "text-gray-400"} accentColor="#159E22" iconBg="bg-green-50" iconColor="text-[#159E22]" icon={Clock} sparkData={data.stats.hours > 0 ? [9, 11, 10, 12, 13, 14, 14.5] : []} sparkColor="#159E22" />
+        <StatCard title="Active partners" value={`${Math.round(partners)}`} sub="Past collaborations" subColor="text-[#1492ab]" accentColor="#1492ab" iconBg="bg-cyan-50" iconColor="text-[#1492ab]" icon={Users} sparkData={data.stats.partners > 0 ? [3, 4, 4, 5, 5, 6, 7] : []} sparkColor="#1492ab" />
+        <StatCard title="Avg session score" value={`${Math.round(score)}%`} sub="Current Knowledge Level" subColor="text-[#5114ab]" accentColor="#5114ab" iconBg="bg-purple-50" iconColor="text-[#5114ab]" icon={Target} sparkData={data.stats.score > 0 ? [80, 83, 85, 88, 87, 90, 92] : []} sparkColor="#5114ab" />
       </div>
 
       {/* ── main grid ── */}
@@ -197,7 +197,7 @@ export default function DashboardPage() {
               <CalendarIcon className="text-[#1363CB] w-4 h-4" /> Upcoming sessions
             </h2>
             {data.sessions.length > 0 && (
-              <button 
+              <button
                 onClick={() => router.push(`/Student/${studentId}/Sessions`)}
                 className="text-xs font-medium text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors cursor-pointer"
               >
@@ -205,17 +205,17 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
-          
+
           <div className="space-y-3 flex-1 flex flex-col">
             {data.sessions.length > 0 ? (
               data.sessions.map((session: any) => (
                 <SessionCard
                   key={session.id}
-                  dotColor="#1363CB" 
+                  dotColor="#1363CB"
                   title={session.title}
-                  avatars={session.avatars} 
+                  avatars={session.avatars}
                   time={session.time}
-                  badge="Scheduled" 
+                  badge="Scheduled"
                   badgeStyle="bg-blue-50 text-[#1363CB]"
                 />
               ))
@@ -238,7 +238,7 @@ export default function DashboardPage() {
               <Target className="text-[#1363CB] w-4 h-4" /> Weekly goals
             </h2>
           </div>
-          
+
           {data.goals.length > 0 ? (
             <>
               <div className="flex justify-center mb-4">
@@ -255,7 +255,7 @@ export default function DashboardPage() {
               </div>
             </>
           ) : (
-             <div className="flex-1 flex flex-col items-center justify-center py-6 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+            <div className="flex-1 flex flex-col items-center justify-center py-6 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
               <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3">
                 <Target className="w-5 h-5 text-gray-400" />
               </div>
@@ -272,7 +272,7 @@ export default function DashboardPage() {
               <Users className="text-[#1363CB] w-4 h-4" /> Suggested partners
             </h2>
             {data.suggestedPartners.length > 0 && (
-              <button 
+              <button
                 onClick={() => router.push(`/Student/${studentId}/FindPartners`)}
                 className="text-xs font-medium text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors cursor-pointer"
               >
