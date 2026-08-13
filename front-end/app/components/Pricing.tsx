@@ -142,11 +142,11 @@ export default function Pricing() {
                 <div className="mt-auto pointer-events-auto">
                   {plan.highlighted ? 
                     <button onClick={() => handleCheckout(plan.name)} disabled={loadingPlan !== null} className="group border-2 bg-primary-linear w-full px-6 py-2 text-white hover:opacity-90 transition-all flex items-center justify-center gap-2">
-                        {loadingPlan === plan.name ? <DotsRing className=" w-8 h-8" /> : "Choose Student"}
+                        {loadingPlan === plan.name ? <DotsRing className="text-[#9C2FDF] w-8 h-8" /> : "Choose Student"}
                     </button>
                   :
                     <button onClick={() => handleCheckout(plan.name)} disabled={loadingPlan !== null} className={`w-full px-6 py-2 text-white hover:bg-transparent hover:text-primary-color border-2 border-transparent hover:border-primary-color rounded-xl font-regular bg-primary-color transition-all flex items-center justify-center gap-2`}>
-                        {loadingPlan === plan.name ? <DotsRing className=" w-8 h-8" /> : `Choose ${plan.name}`}
+                        {loadingPlan === plan.name ? <DotsRing className="text-[#9C2FDF] w-8 h-8" /> : `Choose ${plan.name}`}
                     </button> 
                   }
                 </div>

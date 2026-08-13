@@ -506,7 +506,7 @@ export default function OnboardingFlow() {
                         Go Back
                       </button>
                       <button onClick={startVoiceExam} disabled={isConnecting} className="flex items-center gap-2 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg bg-blue-600 hover:bg-blue-700">
-                        {isConnecting ? <><DotsRing className=" w-8 h-8"  /> Connecting...</> : <><Mic className="w-5 h-5" /> Start Voice Exam</>}
+                        {isConnecting ? <><DotsRing className="text-[#9C2FDF] w-8 h-8"  /> Connecting...</> : <><Mic className="w-5 h-5" /> Start Voice Exam</>}
                       </button>
                     </div>
                   </>
@@ -541,7 +541,7 @@ export default function OnboardingFlow() {
             {/* STEP 4: LOADING */}
             {step === 4 && (
               <motion.div key="s4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center text-center">
-                <DotsRing className="text-violet-600 mb-6 w-8 h-8"  />
+                <DotsRing className="text-[#9C2FDF] mb-6 w-8 h-8"  />
                 <h3 className="text-2xl font-bold text-gray-900">Finalizing your profile...</h3>
                 <p className="text-gray-500 mt-2 font-medium">Extracting personality traits & mapping cognitive patterns</p>
               </motion.div>

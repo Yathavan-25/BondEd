@@ -512,7 +512,7 @@ export default function VoiceAssistantPage() {
 
               {assistantState === "analyzing" && (
                 <div className="px-8 py-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-[#1363CB] font-bold text-base flex items-center gap-3 animate-pulse">
-                  <DotsRing className="text-[#1363CB]" dotScale={0.12} radiusScale={0.25} /> Wrapping up & saving session...
+                  <DotsRing className="text-[#9C2FDF]" dotScale={0.12} radiusScale={0.25} /> Wrapping up & saving session...
                 </div>
               )}
             </div>

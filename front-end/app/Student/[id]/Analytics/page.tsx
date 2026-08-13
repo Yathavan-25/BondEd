@@ -69,10 +69,10 @@ export default function AnalyticsPage() {
 
   if (loading) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500">
-            <DotsRing className="mb-4 text-violet-600 w-8 h-8" /> 
-            <p className="font-semibold text-lg">Loading Analytics...</p>
-        </div>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <DotsRing className="text-[#9C2FDF] mb-4 w-8 h-8" />
+        <p className="text-gray-500 font-medium text-sm">Loading Analytics...</p>
+      </div>
       )
   }
   

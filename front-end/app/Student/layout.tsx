@@ -311,7 +311,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 shadow-2xl rounded-2xl p-4 z-50 max-h-96 overflow-y-auto space-y-4 animate-in fade-in slide-in-from-top-2">
                       {isSearchLoading && (
                         <div className="py-6 flex items-center justify-center text-gray-400 gap-2">
-                          <DotsRing className="text-[#1363CB] w-8 h-8"  /> Searching...
+                          <DotsRing className="text-[#9C2FDF] w-8 h-8"  /> Searching...
                         </div>
                       )}
 

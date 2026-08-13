@@ -112,7 +112,7 @@ export default function SessionsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <DotsRing className="w-16 h-16 text-[#1363CB]" />
+        <DotsRing className="text-[#9C2FDF] w-8 h-8" />
       </div>
     );
   }
@@ -313,7 +313,7 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
              onClick={handleWatchCollab}
              disabled={loadingRec}
              className={`group/btn relative bg-gradient-to-r from-gray-800 to-gray-900 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait`}>
-            {loadingRec ? <DotsRing className=" w-8 h-8"  /> : <Video className="w-4 h-4" />}
+            {loadingRec ? <DotsRing className="text-[#9C2FDF] w-8 h-8"  /> : <Video className="w-4 h-4" />}
             {loadingRec ? "Loading..." : "Watch Recording"}
             {!loadingRec && <ChevronRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5" />}
           </button>
@@ -743,7 +743,7 @@ function CreateSessionModal({
                   <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto divide-y divide-gray-100">
                     {friendsLoading ? (
                       <div className="p-6 flex justify-center">
-                        <DotsRing className="text-violet-600 w-8 h-8"  />
+                        <DotsRing className="text-[#9C2FDF] w-8 h-8"  />
                       </div>
                     ) : filteredFriends.length === 0 ? (
                       <div className="p-6 text-center text-sm text-gray-400">

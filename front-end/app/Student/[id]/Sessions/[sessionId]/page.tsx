@@ -630,7 +630,7 @@ export default function ActiveSessionRoom() {
                   <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-[#1363CB] to-[#9C2FDF] grid place-items-center shadow-xl shadow-[#9C2FDF]/30 animate-pulse">
                     <Users className="h-8 w-8 text-white" />
                   </div>
-                  <DotsRing className="text-purple-400 absolute -bottom-2 -right-2 w-8 h-8"  />
+                  <DotsRing className="text-[#9C2FDF] absolute -bottom-2 -right-2 w-8 h-8"  />
                 </div>
                 <h2 className="text-xl font-bold text-slate-100">Connecting to Collaborative Room</h2>
                 <p className="text-sm text-slate-400 mt-1">Preparing high-definition video stage & AI voice copilot…</p>
@@ -743,7 +743,7 @@ export default function ActiveSessionRoom() {
                       <div className="relative mb-3">
                         <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/30 grid place-items-center">
                           {vapiState === "connecting" ? (
-                            <DotsRing className="text-purple-400 w-8 h-8"  />
+                            <DotsRing className="text-[#9C2FDF] w-8 h-8"  />
                           ) : vapiState === "muted" ? (
                             <MicOff className="w-7 h-7 text-amber-400" />
                           ) : (
@@ -855,7 +855,7 @@ export default function ActiveSessionRoom() {
                   className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition disabled:opacity-50"
                 >
                   {isEnding ? (
-                    <DotsRing className=" w-8 h-8"  />
+                    <DotsRing className="text-[#9C2FDF] w-8 h-8"  />
                   ) : (
                     <Power className="w-4 h-4" />
                   )}

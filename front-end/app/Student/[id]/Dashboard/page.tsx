@@ -149,8 +149,8 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <DotsRing className="text-violet-600 mb-4 w-8 h-8" />
-        <p className="text-gray-500 font-medium">Loading your dashboard...</p>
+        <DotsRing className="text-[#9C2FDF] mb-4 w-8 h-8" />
+        <p className="text-gray-500 font-medium text-sm">Loading Dashboard...</p>
       </div>
     );
   }
