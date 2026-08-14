@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signOut, sendPasswordResetEmail, updatePassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { LogOut, Save, User, BookOpen, Target, Brain, Zap, Mic, CheckCircle2, Shield, Key, Camera, Lock, Mail } from "lucide-react";
+import { LogOut, Save, User, BookOpen, Target, Brain, Zap, Mic, CheckCircle2, Shield, Key, Camera, Lock, Mail, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
 const TABS = [
@@ -28,6 +28,7 @@ export default function ProfilePage() {
     academicGoals: "",
     topics: "",
     subjects: "",
+    availability: "",
     learningStyle: "Adaptive",
     avatarUrl: "",
     mfaEnabled: false
@@ -97,7 +98,7 @@ export default function ProfilePage() {
               mfaEnabled: p.mfaEnabled || false,
               personality: p.personality || {},
               knowledgeLevel: p.knowledgeLevel || {},
-              availability: p.availability || {}
+              availability: Array.isArray(p.availability) ? p.availability.join(", ") : (typeof p.availability === "string" ? p.availability : "")
             });
           }
         } catch (error) {
@@ -146,6 +147,7 @@ export default function ProfilePage() {
         learningStyle: [profileData.learningStyle],
         topics: profileData.topics.split(",").map((t: string) => t.trim()).filter(Boolean),
         subjects: profileData.subjects.split(",").map((s: string) => s.trim()).filter(Boolean),
+        availability: typeof profileData.availability === "string" ? profileData.availability.split(",").map((a: string) => a.trim()).filter(Boolean) : profileData.availability,
       };
 
       const res = await fetch(`${baseUrl}/api/profile`, {
@@ -386,22 +388,38 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className={labelClass}>
-                      <Brain className="h-3.5 w-3.5" /> Preferred Learning Style
-                    </label>
-                    <select
-                      name="learningStyle"
-                      value={profileData.learningStyle}
-                      onChange={handleChange}
-                      className={inputClass}
-                    >
-                      <option value="Adaptive">Adaptive (Let AI Decide)</option>
-                      <option value="Visual">Visual (Diagrams &amp; Imagery)</option>
-                      <option value="Aural">Aural (Listening &amp; Speaking)</option>
-                      <option value="Read/Write">Read/Write (Text Heavy)</option>
-                      <option value="Kinesthetic">Kinesthetic (Interactive &amp; Examples)</option>
-                    </select>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                      <label className={labelClass}>
+                        <Brain className="h-3.5 w-3.5" /> Preferred Learning Style
+                      </label>
+                      <select
+                        name="learningStyle"
+                        value={profileData.learningStyle}
+                        onChange={handleChange}
+                        className={inputClass}
+                      >
+                        <option value="Adaptive">Adaptive (Let AI Decide)</option>
+                        <option value="Visual">Visual (Diagrams &amp; Imagery)</option>
+                        <option value="Aural">Aural (Listening &amp; Speaking)</option>
+                        <option value="Read/Write">Read/Write (Text Heavy)</option>
+                        <option value="Kinesthetic">Kinesthetic (Interactive &amp; Examples)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>
+                        <Clock className="h-3.5 w-3.5" /> Availability Timings
+                      </label>
+                      <input
+                        type="text"
+                        name="availability"
+                        value={profileData.availability}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="E.g., Weekends, Mon 10am-12pm (Comma separated)"
+                      />
+                    </div>
                   </div>
                 </div>
               </section>
