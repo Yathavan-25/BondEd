@@ -545,8 +545,13 @@ export const getCollabRecording = async (req: Request, res: Response): Promise<v
 
 export const getStudentSessions = async (req: Request, res: Response): Promise<void> => {
     try {
-        const studentId = getStringParam(req.params.studentId);
-        if (!studentId) { res.status(400).json({ error: "Student ID missing" }); return; }
+        const studentIdParam = getStringParam(req.params.studentId);
+        if (!studentIdParam) { res.status(400).json({ error: "Student ID missing" }); return; }
+
+        let user = await prisma.user.findUnique({ where: { firebaseUid: studentIdParam } });
+        if (!user) user = await prisma.user.findUnique({ where: { id: studentIdParam } });
+        if (!user) { res.status(404).json({ error: "User not found" }); return; }
+        const studentId = user.id;
 
         const sessions = await prisma.session.findMany({
             where: {
@@ -578,11 +583,13 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
 
             const startsInMin = uiStatus === "upcoming" ? Math.max(0, Math.floor((startTime - now) / 60000)) : undefined;
 
-            const avatars = session.participants.map(p =>
+            const otherParticipants = session.participants.filter(p => p.id !== studentId);
+
+            const avatars = otherParticipants.map(p =>
                 p.firstName ? `${p.firstName.charAt(0)}${p.lastName?.charAt(0) || ''}`.toUpperCase() : p.email.substring(0, 2).toUpperCase()
             );
 
-            const participantDetails = session.participants.map(p => ({
+            const participantDetails = otherParticipants.map(p => ({
                 initials: p.firstName ? `${p.firstName.charAt(0)}${p.lastName?.charAt(0) || ''}`.toUpperCase() : p.email.substring(0, 2).toUpperCase(),
                 avatarUrl: p.profile?.avatarUrl || null
             }));
@@ -598,17 +605,15 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
                 }
             }
 
-            const safeSession = session as any;
-
-            const isAISession = !safeSession.dailyRoomUrl && safeSession.title?.includes("AI Session");
+            const isAISession = !session.dailyRoomUrl && Boolean(session.title?.includes("AI Session"));
             let sessionType = "Live Collab";
             if (isAISession) sessionType = "AI Session";
             else if (uiStatus === "past") sessionType = "Recorded Collab";
 
             return {
                 id: session.id,
-                title: safeSession.title || (isAISession ? "AI Study Partner" : "Collaborative Study Session"),
-                subject: safeSession.subject || session.host.profile?.subjects[0] || "General",
+                title: session.title || (isAISession ? "AI Study Partner" : "Collaborative Study Session"),
+                subject: session.subject || session.host.profile?.subjects?.[0] || "General",
                 duration: session.endTime ? `${Math.floor((new Date(session.endTime).getTime() - startTime) / 60000)} mins` : "60 mins",
                 type: sessionType,
                 date: new Date(session.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -633,12 +638,17 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
 
 export const endVoiceSession = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { studentId, callId, selectedTopic, transcripts, structuredData, summary, startTime, endTime } = req.body;
+        const { studentId: reqStudentId, callId, selectedTopic, transcripts, structuredData, summary, startTime, endTime } = req.body;
 
-        if (!studentId) {
+        if (!reqStudentId) {
             res.status(400).json({ error: "Missing studentId" });
             return;
         }
+
+        let user = await prisma.user.findUnique({ where: { firebaseUid: reqStudentId } });
+        if (!user) user = await prisma.user.findUnique({ where: { id: reqStudentId } });
+        if (!user) { res.status(404).json({ error: "User not found" }); return; }
+        const studentId = user.id;
 
         const finalSummary = summary || structuredData?.summary || "Completed voice study session.";
         const finalStructuredData = structuredData || {};
