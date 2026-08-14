@@ -687,7 +687,7 @@ export const endVoiceSession = async (req: Request, res: Response): Promise<void
 
 export const saveSession = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { sessionId } = req.params;
+        const sessionId = req.params.sessionId as string;
         const studentId = (req as any).user?.uid || req.body.studentId;
         
         if (!studentId) {
@@ -723,7 +723,7 @@ export const saveSession = async (req: Request, res: Response): Promise<void> =>
 
 export const unsaveSession = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { sessionId } = req.params;
+        const sessionId = req.params.sessionId as string;
         const studentId = (req as any).user?.uid || req.body.studentId;
         
         if (!studentId) {
