@@ -34,6 +34,7 @@ type Session = {
   progress?: number;
   isAISession?: boolean;
   recordingUrl?: string | null;
+  isSaved?: boolean;
 };
 
 type Friend = {
@@ -88,13 +89,12 @@ export default function SessionsPage() {
   }, [studentId]);
 
   const filtered = useMemo(() => {
-    const base = sessions.filter((s) =>
-      activeTab === "Upcoming"
-        ? s.status === "upcoming" || s.status === "live"
-        : activeTab === "Past Sessions"
-        ? s.status === "past"
-        : false
-    );
+    const base = sessions.filter((s) => {
+      if (activeTab === "Saved") return s.isSaved;
+      if (activeTab === "Upcoming") return s.status === "upcoming" || s.status === "live";
+      if (activeTab === "Past Sessions") return s.status === "past";
+      return false;
+    });
     if (!query.trim()) return base;
     const q = query.toLowerCase();
     return base.filter(
@@ -250,6 +250,29 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
   const isPast = session.status === "past";
 
   const [loadingRec, setLoadingRec] = useState(false);
+  const [isSaved, setIsSaved] = useState(session.isSaved);
+  const [saving, setSaving] = useState(false);
+
+  const toggleSave = async () => {
+    setSaving(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const method = isSaved ? 'DELETE' : 'POST';
+      const endpoint = isSaved ? 'unsave' : 'save';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/sessions/${session.id}/${endpoint}`, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setIsSaved(!isSaved);
+        toast.success(isSaved ? "Removed from saved" : "Session saved");
+      }
+    } catch {
+      toast.error("Error saving session");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleWatchCollab = async () => {
       setLoadingRec(true);
@@ -339,18 +362,27 @@ function SessionCard({ session, index, studentId }: { session: Session; index: n
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-gray-900 truncate">{session.title}</h3>
-            {isLive && (
-              <span className="text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-                Live
-              </span>
-            )}
-            {session.isAISession && (
-              <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
-                AI Partner
-              </span>
-            )}
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-gray-900 truncate">{session.title}</h3>
+              {isLive && (
+                <span className="text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                  Live
+                </span>
+              )}
+              {session.isAISession && (
+                <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
+                  AI Partner
+                </span>
+              )}
+            </div>
+            <button 
+              onClick={toggleSave}
+              disabled={saving}
+              className={`transition-colors disabled:opacity-50 ${isSaved ? "text-[#1363CB]" : "text-gray-400 hover:text-[#1363CB]"}`}
+            >
+              <Bookmark className="w-5 h-5" fill={isSaved ? "currentColor" : "none"} />
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-2 text-xs text-gray-500">

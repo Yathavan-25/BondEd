@@ -117,12 +117,24 @@ export const joinRoom = async (req: Request, res: Response): Promise<void> => {
 
 export const createSession = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { hostId, participantIds, title, subject, startTime } = req.body;
+        const { hostId, participantIds, title, subject, startTime, duration } = req.body;
 
         if (!hostId || !title || !startTime) {
             res.status(400).json({ error: "Missing required fields" });
             return;
         }
+        
+        let durationMinutes = 60;
+        if (duration) {
+            if (duration === "30 min") durationMinutes = 30;
+            else if (duration === "45 min") durationMinutes = 45;
+            else if (duration === "1 hour") durationMinutes = 60;
+            else if (duration === "1.5 hours") durationMinutes = 90;
+            else if (duration === "2 hours") durationMinutes = 120;
+            else if (duration === "3 hours") durationMinutes = 180;
+        }
+        const parsedStartTime = new Date(startTime);
+        const parsedEndTime = new Date(parsedStartTime.getTime() + durationMinutes * 60000);
 
         const dailyResponse = await fetch('https://api.daily.co/v1/rooms/', {
             method: 'POST',
@@ -154,7 +166,8 @@ export const createSession = async (req: Request, res: Response): Promise<void> 
 
         const sessionData: any = {
             status: "scheduled",
-            startTime: new Date(startTime),
+            startTime: parsedStartTime,
+            endTime: parsedEndTime,
             title: title,
             subject: subject,
             dailyRoomUrl: roomUrl,
@@ -542,7 +555,7 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
                     { participants: { some: { id: studentId } } }
                 ]
             },
-            include: { host: { include: { profile: true } }, participants: { include: { profile: true } } },
+            include: { host: { include: { profile: true } }, participants: { include: { profile: true } }, savedBy: { select: { id: true } } },
             orderBy: { startTime: 'desc' }
         });
 
@@ -606,7 +619,8 @@ export const getStudentSessions = async (req: Request, res: Response): Promise<v
                 participantDetails: participantDetails,
                 host: `${session.host.firstName || ''} ${session.host.lastName || ''}`.trim(),
                 startsInMin: startsInMin,
-                isAISession: isAISession
+                isAISession: isAISession,
+                isSaved: session.savedBy?.some(u => u.id === studentId) || false
             };
         });
 
@@ -668,5 +682,77 @@ export const endVoiceSession = async (req: Request, res: Response): Promise<void
     } catch (error) {
         console.error("Error processing voice session:", error);
         res.status(500).json({ error: "Failed to process voice session" });
+    }
+};
+
+export const saveSession = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { sessionId } = req.params;
+        const studentId = (req as any).user?.uid || req.body.studentId;
+        
+        if (!studentId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        let user = await prisma.user.findUnique({ where: { firebaseUid: studentId } });
+        if (!user) {
+            user = await prisma.user.findUnique({ where: { id: studentId } });
+        }
+        
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        await prisma.session.update({
+            where: { id: sessionId },
+            data: {
+                savedBy: {
+                    connect: { id: user.id }
+                }
+            }
+        });
+
+        res.status(200).json({ success: true, message: "Session saved" });
+    } catch (error) {
+        console.error("Error saving session:", error);
+        res.status(500).json({ error: "Failed to save session" });
+    }
+};
+
+export const unsaveSession = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { sessionId } = req.params;
+        const studentId = (req as any).user?.uid || req.body.studentId;
+        
+        if (!studentId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        let user = await prisma.user.findUnique({ where: { firebaseUid: studentId } });
+        if (!user) {
+            user = await prisma.user.findUnique({ where: { id: studentId } });
+        }
+        
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        await prisma.session.update({
+            where: { id: sessionId },
+            data: {
+                savedBy: {
+                    disconnect: { id: user.id }
+                }
+            }
+        });
+
+        res.status(200).json({ success: true, message: "Session unsaved" });
+    } catch (error) {
+        console.error("Error unsaving session:", error);
+        res.status(500).json({ error: "Failed to unsave session" });
     }
 };

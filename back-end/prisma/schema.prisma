@@ -25,6 +25,7 @@ model User {
   credits           UserCredits?
   sessions          Session[]           @relation("SessionParticipants")
   hostedSessions    Session[]           @relation("SessionHost")
+  savedSessions     Session[]           @relation("SavedSessions")
   transactions      CreditTransaction[]
   usageLogs         UsageLog[]  
 }
@@ -67,6 +68,7 @@ model Session {
   hostId        String
   host          User     @relation("SessionHost", fields: [hostId], references: [id])
   participants  User[]   @relation("SessionParticipants")
+  savedBy       User[]   @relation("SavedSessions")
   title         String?  
   subject       String?  
   dailyRoomUrl  String?
