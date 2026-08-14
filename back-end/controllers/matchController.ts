@@ -2,28 +2,28 @@ import type { Request, Response } from "express";
 import prisma from "../config/prisma.js";
 
 //Helper function to calculate the overlap between two arrays (eg : subject overlap )
-const calculateMatch = (arr1 : string[], arr2 : string[]) => {
-    if(!arr1 || !arr2 || arr1.length === 0 || arr2.length === 0) return 0;
+const calculateMatch = (arr1: string[], arr2: string[]) => {
+    if (!arr1 || !arr2 || arr1.length === 0 || arr2.length === 0) return 0;
     //filters any values that are on array one from array two
-    const overlap = arr1.filter( value => arr2.includes(value));
+    const overlap = arr1.filter(value => arr2.includes(value));
     return overlap.length / Math.max(arr1.length, arr2.length);
     // returns the match between both students
     // eg : user1 = 3 subject user2 = 4 subject and 2 topic match = 2 / 4 = 0.5 //
 }
 
 //Helper function to match topics
-const calculateAbsMatch = (arr1 : string[], arr2 : string[]) =>{
+const calculateAbsMatch = (arr1: string[], arr2: string[]) => {
     if (!arr1 || !arr2 || arr1.length === 0 || arr2.length === 0) return 0;
 
-    const normalize = (str : string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
     const normalArr = arr2.map(normalize);
 
     let matchCount = 0;
-    
-    for(const t1 of arr1){
+
+    for (const t1 of arr1) {
         const n1 = normalize(t1);
         const isMatch = normalArr.some(n2 => n1.includes(n2) || n2.includes(n1));
-        if(isMatch) matchCount++;
+        if (isMatch) matchCount++;
     }
     return matchCount / Math.max(arr1.length, arr2.length);
 }
@@ -44,10 +44,10 @@ const calculateBigFiveScore = (p1: any, p2: any): number => {
 
     const e1 = getScore(p1, 'extraversion') || 50;
     const e2 = getScore(p2, 'extraversion') || 50;
-    
+
     const o1 = getScore(p1, 'openness') || 50;
     const o2 = getScore(p2, 'openness') || 50;
-    
+
     const a1 = getScore(p1, 'agreeableness') || 50;
     const a2 = getScore(p2, 'agreeableness') || 50;
 
@@ -65,7 +65,7 @@ const calculateBigFiveScore = (p1: any, p2: any): number => {
 
     // Weighted Average of the core traits
     let finalPsychScore = (cMatch * 0.5) + (eMatch * 0.25) + (oMatch * 0.25);
-    
+
     // Add Agreeableness bonus and cap at 1.0 (100%)
     return Math.min(1.0, finalPsychScore + aBonus);
 }
@@ -75,12 +75,12 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
 
     try {
         const currentUser = await prisma.profile.findUnique({
-            where : { userId },
-            include : { user : true}
+            where: { userId },
+            include: { user: true }
         });
 
-        if(!currentUser) {
-            res.status(400).json({ error : "Profile not found" });
+        if (!currentUser) {
+            res.status(400).json({ error: "Profile not found" });
             return;
         }
 
@@ -100,22 +100,18 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
 
         // 2. Fetch Potential Partners (excluding the ones above)
         const potentialPartners = await prisma.profile.findMany({
-            where : {
+            where: {
                 userId: { notIn: excludedUserIds }, // THE MAGIC FILTER!
-                OR : [
-                    { topics : { hasSome : currentUser.topics }},
-                    { subjects : { hasSome : currentUser.subjects }}
-                ],
             },
-            include : { user : true }
+            include: { user: true }
         });
 
-        const matches = potentialPartners.map( partner => {
+        const matches = potentialPartners.map(partner => {
             let score = 0;
 
             // ----- HIGHEST PRIORITY MATCH ( TOPIC, SUBJECT ) ( 40% ) ----- 
             const topicMatch = calculateAbsMatch(currentUser.topics, partner.topics);
-            score += topicMatch * 25; 
+            score += topicMatch * 25;
             const subjectMatch = calculateAbsMatch(currentUser.subjects, partner.subjects);
             score += subjectMatch * 15;
 
@@ -124,18 +120,18 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
             score += bigFiveMatch * 25;
 
             // ----- KNOWLEDGE MATCH ( 15% ) ----- 
-            const currentUserKnowledge = ( currentUser.knowledgeLevel as any )?.score || 0;
-            const partnerKnowledge = ( partner.knowledgeLevel as any )?.score || 0;
+            const currentUserKnowledge = (currentUser.knowledgeLevel as any)?.score || 0;
+            const partnerKnowledge = (partner.knowledgeLevel as any)?.score || 0;
             score += Math.max(0, 15 - (Math.abs(currentUserKnowledge - partnerKnowledge) / 15));
 
             // ----- AVAILABILITY MATCH ( 10% ) -----
-            const currenUserAvail = ( currentUser.availability as any )?.times || [];
-            const partnerAvail = ( partner.availability as any )?.times || [];
-            const availabilityMatch = calculateMatch( currenUserAvail, partnerAvail );
+            const currenUserAvail = (currentUser.availability as any)?.times || [];
+            const partnerAvail = (partner.availability as any)?.times || [];
+            const availabilityMatch = calculateMatch(currenUserAvail, partnerAvail);
             score += availabilityMatch * 10;
 
             // ----- LEARNING STYLE MATCH ( 10% ) -----
-            const styleMatch = calculateMatch( currentUser.learningStyle, partner.learningStyle );
+            const styleMatch = calculateMatch(currentUser.learningStyle, partner.learningStyle);
             score += styleMatch * 10
 
             const breakdown = (partner.knowledgeLevel as any)?.topicBreakdown || [];
@@ -152,14 +148,14 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
             unifiedTopics.sort((a, b) => b.score - a.score);
 
             return {
-                id : partner.userId,
+                id: partner.userId,
                 //if partners firstname doesn't exist use the email before the @ 
-                name : partner.user.firstName ? `${partner.user.firstName} ${partner.user.lastName || ''}`.trim() : partner.user.email.split('@')[0],
-                initials : (partner.user.firstName && partner.user.lastName) ? `${partner.user.firstName.charAt(0)}${partner.user.lastName.charAt(0)}`.toUpperCase() : partner.user.email.substring(0, 2).toUpperCase(),
-                match : Math.round(score),
-                lookingForTopic : unifiedTopics,
-                lookingForSubject : partner.subjects,
-                availability : partnerAvail.join(", ") || "Flexible",
+                name: partner.user.firstName ? `${partner.user.firstName} ${partner.user.lastName || ''}`.trim() : partner.user.email.split('@')[0],
+                initials: (partner.user.firstName && partner.user.lastName) ? `${partner.user.firstName.charAt(0)}${partner.user.lastName.charAt(0)}`.toUpperCase() : partner.user.email.substring(0, 2).toUpperCase(),
+                match: Math.round(score),
+                lookingForTopic: unifiedTopics,
+                lookingForSubject: partner.subjects,
+                availability: partnerAvail.join(", ") || "Flexible",
                 avatarBg: "from-[#1363CB] to-[#9C2FDF]",
                 avatarUrl: partner.avatarUrl || null,
                 learningStyle: partner.learningStyle,
@@ -168,8 +164,8 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
             }
         });
 
-        matches.sort((a,b) => b.match - a.match );
-        const topMatches = matches.slice( 0, 10 );
+        matches.sort((a, b) => b.match - a.match);
+        const topMatches = matches.slice(0, 10);
         res.status(200).json(topMatches);
 
     } catch (error) {
