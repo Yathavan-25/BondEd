@@ -101,7 +101,7 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
         // 2. Fetch Potential Partners (excluding the ones above)
         const potentialPartners = await prisma.profile.findMany({
             where: {
-                userId: { notIn: excludedUserIds }, // THE MAGIC FILTER!
+                userId: { notIn: excludedUserIds },
             },
             include: { user: true }
         });
